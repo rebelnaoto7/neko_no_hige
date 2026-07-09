@@ -526,7 +526,7 @@
 
                 <div class="submit-row">
                     <button type="button" class="back-btn-inline"
-                            onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
+                            onclick="location.href='{% url 'tracker:home' %}'">
                         戻る
                     </button>
                     <button type="submit" class="submit-btn">登録</button>
@@ -575,7 +575,7 @@
         {# ============================================================ #}
         <div class="back-button-wrapper">
             <button class="back-button"
-                    onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
+                    onclick="location.href='{% url 'tracker:home' %}'">
                 戻る
             </button>
         </div>

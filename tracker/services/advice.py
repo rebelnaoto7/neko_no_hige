@@ -33,7 +33,7 @@ def build_temperature_advice(temp_max, temp_min):
         diff_msg = "気温の変動が少なく、快適に過ごせる一日だにゃ。"
 
     # 絶対気温による「暑い/寒い」（猫の口調）
-    if temp_max >= 27:
+    if temp_max >= 28:
         feel = "今日は暑いにゃ。水分補給を忘れずににゃ。"
     elif temp_min <= 10:
         feel = "今日は冷えるにゃ。あったかくして過ごしてにゃ。"

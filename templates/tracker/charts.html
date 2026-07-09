@@ -567,18 +567,17 @@
                 if (d.body_part) html += '<div class="nhtt-kv"><span class="nhtt-k">部位</span><span class="nhtt-v">' + esc(d.body_part) + '</span></div>';
                 if (d.memo)      html += '<div class="nhtt-kv"><span class="nhtt-k">メモ</span><span class="nhtt-v nhtt-memo">' + esc(d.memo) + '</span></div>';
             } else {
-                html += '<div class="nhtt-norec">この日の痛みの記録はありません</div>';
+                // 記録が無い日は「痛くない」として表示（グラフの笑顔の猫と一致）
+                html += '<div class="nhtt-pain"><span class="nhtt-lvlabel" style="color:#6BBF7E">痛くない</span></div>';
             }
 
             // ── 気象コンテキストブロック ──
             html += '<div class="nhtt-weather"><div class="nhtt-sectitle">その日の空模様</div>';
 
-            // 気圧（記録がある日は記録時刻の気圧、無ければ日代表値）
-            // 気圧はマーカーの高さ＝記録時刻の実測気圧に統一 → マーカー位置とツールチップが一致
-            //   （線の代表値へ無理に寄せない。記録が無い日のみ日代表 pressure_hpa を出す）
+            // 気圧：痛みを記録した日は「記録時刻の実測気圧」、記録が無い日は「その日の代表気圧（=気圧線の値）」
             const p = (hasPain && d.pain_pressure != null) ? d.pain_pressure
                       : (d.pressure_hpa != null ? d.pressure_hpa : null);
-            const pLabel = (hasPain && d.pain_pressure != null) ? '記録時の気圧' : '気圧';
+            const pLabel = (hasPain && d.pain_pressure != null) ? '記録時の気圧' : 'その日の気圧';
             html += '<div class="nhtt-kv"><span class="nhtt-k">' + pLabel + '</span><span class="nhtt-v">' +
                     (p != null ? p + ' hPa' : 'データなし') + '</span></div>';
 

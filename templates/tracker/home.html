@@ -645,6 +645,13 @@
             border-radius: 30px;
             cursor: pointer;
         }
+
+        .rw-med-head .bell-icon {
+            height: 30px; /* ← 大きさはここで調整 */
+            width: auto;
+            vertical-align: -4px; /* 文字と高さを合わせる */
+            margin-right: 5px;
+        }
     </style>
 
 </head>
@@ -800,7 +807,7 @@
 
             <div class="rw-med">
 
-                <div class="rw-med-head">🔔 次のおくすりは</div>
+                <div class="rw-med-head"><img src="{% static 'tracker/img/bell_icon.png' %}" class="bell-icon" alt="ベル">次のおくすりは</div>
 
                 <div class="rw-time">{% if next_reminder %}{{ next_reminder.label }}{% else %}--:--{% endif %}</div>
 
