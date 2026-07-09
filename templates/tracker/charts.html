@@ -1,0 +1,879 @@
+{% load static %}
+{# ============================================================ #}
+{# templates/tracker/charts.html                                 #}
+{# ねこのひげ - データの見える化（週間気圧×痛みグラフ）          #}
+{#                                                              #}
+{# 【2026-07-02 改修その6：現在地を毎回自動取得＋無限ループ防止】 #}
+{#  ・ページ表示時に自動で現在地取得→保存                        #}
+{#  ・保存座標(data-lat/lon)と約1km以上ずれた時だけリロード       #}
+{#    → リロード後は保存座標≒現在地で一致するのでループしない     #}
+{#  ・自動取得の失敗は静かに無視（手動ボタンはエラー表示あり）    #}
+{#  ・詳細な設計意図は下部 JS セクション5のコメント参照           #}
+{#                                                              #}
+{# 【2026-07-02 改修その5】観測地点カードを1行・薄型・シンプル化  #}
+{#  ・地名（逆ジオ）廃止 → 座標＋更新＋ボタンのみ                 #}
+{#                                                              #}
+{# 【2026-07-01】fetch先 tracker:update_location／安全なエラー処理 #}
+{#                                                              #}
+{# 【2026-06-18：データ表現の精度向上 5点】                      #}
+{#  改善1 軸分離 / 改善2 平滑化解除 / 改善3 気圧Δ / 改善4 警戒帯→急降下リスクへ統一   #}
+{#  改善5 二重符号化（表情＋色リング＋サイズ）                    #}
+{# ============================================================ #}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>データの見える化 | ねこのひげ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg: #E7E3DA;
+            --card: #F1ECE2;
+            --ink: #3E5C4D;
+            --ink-soft: #6E7D72;
+            --orange: #E79B49;
+            --green: #4B6B58;
+            --border: #3E5C4D;
+            --grid: #CFD4CB;
+            --header: #33503F;
+            --header-ink: #F2E7CB;
+            /* 痛みレベル色（改善5：緑→橙→赤で直感的に） */
+            --pain1: #6BBF7E;
+            --pain2: #E0A23C;
+            --pain3: #D15B4A;
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body { background: #E7E3DA !important; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            font-family: "Zen Maru Gothic","Meiryo UI",sans-serif;
+            color: var(--ink);
+        }
+
+        /* ============================================================ */
+        /* サイトヘッダー                                                */
+        /* ============================================================ */
+        .site-header {
+            background: var(--header);
+            padding: 12px 28px;
+            display: flex;
+            align-items: center;
+            gap: 28px;
+        }
+        .brand img { height: 46px; display: block; }
+
+        .site-nav { display: flex; gap: 6px; align-items: center; }
+        .site-nav a {
+            display: flex; align-items: center; gap: 8px;
+            color: var(--header-ink);
+            text-decoration: none;
+            font-weight: 500; font-size: 15px;
+            padding: 8px 16px;
+            border-radius: 999px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .site-nav a .nav-paw { width: 16px; height: 16px; opacity: 0.85; }
+        .site-nav a:hover { background: rgba(255,255,255,0.12); }
+        .site-nav a.active { background: var(--orange); color: #fff; font-weight: 700; }
+        .site-nav a.active .nav-paw { opacity: 1; filter: brightness(0) invert(1); }
+
+        .wrap { max-width: 860px; margin: 0 auto; padding: 20px 16px 48px; }
+
+        .card {
+            background: var(--card);
+            border-radius: 28px;
+            padding: 22px 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 14px rgba(0,0,0,.05);
+        }
+        .card--chart { height: 440px; }
+
+        /* ============================================================ */
+        /* 凡例                                                          */
+        /* ============================================================ */
+        .legend {
+            display: flex; flex-wrap: wrap; gap: 10px 20px;
+            font-size: 12.5px; color: var(--ink-soft);
+            margin: 2px 4px 18px;
+        }
+        .legend .item { display: inline-flex; align-items: center; gap: 7px; }
+        .legend .line { width: 22px; height: 0; border-top: 3px solid; display: inline-block; }
+        .legend .dot  { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 3px solid; }
+        .legend .band { width: 16px; height: 14px; border-radius: 3px; display: inline-block; background: rgba(209,91,74,.16); }
+
+        .memo-title {
+            font-size: 20px; font-weight: 700; text-align: center;
+            margin: 4px 0 18px; letter-spacing: .04em;
+        }
+        .memo-title .paw { color: #9CB3A0; }
+
+        .weather-table {
+            border-collapse: separate; border-spacing: 0;
+            width: 100%;
+            border: 2px solid var(--border);
+            border-radius: 14px; overflow: hidden;
+            table-layout: fixed;
+        }
+            .weather-table .temp {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                line-height: 1.3;
+            }
+                .weather-table .temp .tmax { color: #E0764A; font-weight: 700; }
+                .weather-table .temp .tmin { color: #4A78C0; font-weight: 700; }
+
+        .weather-table th, .weather-table td {
+            border: 1px solid var(--grid);
+            text-align: center; padding: 8px 4px; vertical-align: middle;
+        }
+        .weather-table thead th { font-weight: 500; font-size: 13px; line-height: 1.3; color: var(--ink); }
+        .weather-table thead th small { display: block; font-size: 11px; color: var(--ink-soft); }
+        .row-label { width: 64px; font-weight: 700; color: var(--ink); }
+        .wi { width: 38px; height: 38px; }
+        .temp { display: flex; justify-content: center; align-items: center; height: 42px; }
+        .temp .v { color: var(--orange); font-weight: 700; font-size: 16px; }
+
+        /* 戻るボタン */
+        .back-button-wrapper { text-align: center; margin: 12px 0 40px; }
+        .back-button {
+            padding: 14px 42px; font-size: 18px; border-radius: 999px;
+            border: none; background: var(--orange); color: #fff;
+            font-family: "Meiryo UI", sans-serif; cursor: pointer; transition: 0.2s;
+        }
+        .back-button:hover { opacity: 0.85; }
+
+        /* ============================================================ */
+        /* 📍 観測地点カード（1行・薄型・控えめ）                         */
+        /* ============================================================ */
+        .location-card {
+            padding: 6px 18px;
+        }
+        .loc-inner {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .loc-pin {
+            font-size: 15px;
+            line-height: 1;
+            flex: 0 0 auto;
+            opacity: .8;
+        }
+        .loc-coord {
+            font-size: 12px;
+            color: var(--ink-soft);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
+        .loc-sep {
+            color: #C7C2B8;
+            font-size: 11px;
+            user-select: none;
+        }
+        .loc-updated {
+            font-size: 11px;
+            color: var(--ink-soft);
+            font-variant-numeric: tabular-nums;
+        }
+        .loc-btn {
+            flex: 0 0 auto;
+            margin-left: auto;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #fff;
+            background: var(--orange);
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+        .loc-btn:hover { opacity: 0.88; }
+        .loc-btn:disabled { opacity: 0.5; cursor: default; }
+        .loc-msg {
+            flex: 0 0 auto;
+            font-size: 11px;
+            color: var(--ink-soft);
+        }
+
+        /* ============================================================ */
+        /* 🐾 カスタムツールチップ（痛み×気圧のインサイトカード）        */
+        /*   ・既定の黒box(enabled:false)の代わりに body 直下へ1枚描画   */
+        /*   ・配色はページテーマ（ベージュ×暖色×深緑）に統一           */
+        /* ============================================================ */
+        .nhtt {
+            position: absolute;
+            pointer-events: none;      /* ホバーを邪魔しない */
+            z-index: 9999;
+            opacity: 0;
+            transition: opacity .12s ease;
+        }
+        .nhtt-card {
+            min-width: 208px;
+            max-width: 288px;
+            background: #FBF8F1;
+            border: 1px solid #E4DDCE;
+            border-left: 5px solid #B9C3BC;   /* 痛みの強さ色で上書きされる */
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(46,74,58,0.20);
+            padding: 11px 13px;
+            font-family: "Zen Maru Gothic","Meiryo UI",sans-serif;
+            color: var(--ink);
+            font-size: 12.5px;
+            line-height: 1.55;
+        }
+        .nhtt-head {
+            display: flex; align-items: baseline; justify-content: space-between;
+            gap: 10px; margin-bottom: 7px;
+            border-bottom: 1px dashed #E4DDCE; padding-bottom: 6px;
+        }
+        .nhtt-date { font-weight: 700; font-size: 14px; letter-spacing: .02em; }
+        .nhtt-time { font-size: 11.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .nhtt-pain { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 2px; }
+        .nhtt-lvlabel { font-weight: 700; font-size: 14px; }
+        .nhtt-bar { display: inline-flex; gap: 3px; flex: 0 0 auto; }
+        .nhtt-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+        .nhtt-kv { display: flex; gap: 8px; margin-top: 3px; }
+        .nhtt-k { flex: 0 0 auto; width: 70px; color: var(--ink-soft); font-size: 11.5px; }
+        .nhtt-v { flex: 1 1 auto; }
+        .nhtt-memo { color: var(--ink); }
+        .nhtt-norec { color: #8A9A8E; font-size: 12px; padding: 3px 0 1px; }
+        .nhtt-weather { margin-top: 9px; padding-top: 8px; border-top: 1px dashed #E4DDCE; }
+        .nhtt-sectitle { font-size: 10.5px; font-weight: 700; color: #9CB3A0; margin-bottom: 4px; letter-spacing: .06em; }
+        .nhtt-risk {
+            display: inline-block; min-width: 16px; text-align: center;
+            color: #fff; font-weight: 700; font-size: 11px;
+            padding: 1px 8px; border-radius: 999px;
+        }
+        .nhtt-riskdesc { font-size: 11px; color: var(--ink-soft); }
+    </style>
+</head>
+<body>
+
+    {# ============================================================ #}
+    {# サイトヘッダー（現在ページ＝見える化を .active で強調）          #}
+    {# ============================================================ #}
+    <header class="site-header">
+        <a href="{% url 'tracker:home' %}" class="brand">
+            <img src="{% static 'tracker/img/cat_logo.png' %}" alt="ねこのひげ">
+        </a>
+        <nav class="site-nav">
+            <a href="{% url 'tracker:pain_create' %}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+                痛みの記録
+            </a>
+            <a href="{% url 'tracker:charts' %}" class="active">
+                <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+                見える化
+            </a>
+            <a href="{% url 'tracker:weather_risk' %}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+                痛み予報
+            </a>
+            <a href="{% url 'tracker:reminder' %}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+                リマインダー設定
+            </a>
+        </nav>
+    </header>
+
+    <div class="wrap">
+
+        <section class="card card--chart">
+            <canvas id="painWeatherChart"></canvas>
+        </section>
+
+        {# 凡例（痛み予報とリスク基準・配色を統一） #}
+        <div class="legend">
+            <span class="item"><span class="line" style="border-color:#E79B49;"></span>気圧 (hPa)</span>
+            <span class="item"><span class="band" style="background:rgba(229,161,63,0.55);"></span>急降下リスク 中</span>
+            <span class="item"><span class="band" style="background:rgba(217,83,79,0.50);"></span>急降下リスク 高</span>
+            <span class="item"><span class="line" style="border-color:#8A9A8E;border-top-style:dashed;"></span>1010hPa（低めの目安）</span>
+            <span class="item"><span class="dot" style="border-color:#6BBF7E;"></span>記録した痛み 軽</span>
+            <span class="item"><span class="dot" style="border-color:#E0A23C;"></span>記録した痛み 中</span>
+            <span class="item"><span class="dot" style="border-color:#D15B4A;"></span>記録した痛み 強</span>
+        </div>
+
+        {# ============================================================ #}
+        {# 観測地点カード：1行・薄型。data-lat/lon は自動取得の比較用     #}
+        {#   （無限ループ防止のため、保存済み座標をここに埋め込む）       #}
+        {# ============================================================ #}
+        <section class="card location-card"
+                 id="locCard"
+                 data-lat="{{ loc_lat|floatformat:6 }}"
+                 data-lon="{{ loc_lon|floatformat:6 }}">
+            <div class="loc-inner">
+                <span class="loc-pin">📍</span>
+                <span class="loc-coord">{{ loc_lat|floatformat:4 }}, {{ loc_lon|floatformat:4 }}</span>
+                {% if loc_updated %}
+                <span class="loc-sep">·</span>
+                <span class="loc-updated">更新 {{ loc_updated|date:"m/d H:i" }}</span>
+                {% endif %}
+                <button type="button" id="getLocBtn" class="loc-btn">📍 現在地を取得して更新</button>
+                <span class="loc-msg" id="locMsg"></span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 class="memo-title">‐ 週間の天気と気温メモ ‐ <span class="paw">🐾</span></h2>
+            <table class="weather-table">
+                <thead>
+                    <tr>
+                        <th class="row-label"></th>
+                        {% for d in week %}
+                        <th>{{ d.date_label }}<small>({{ d.dow }})</small></th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="row-label">天気</td>
+                        {% for d in week %}
+                        <td>
+                            {% if d.weather_code == 0 %}
+                            <svg viewBox="0 0 48 48" class="wi"><circle cx="24" cy="24" r="9" fill="#F2C14E" stroke="#E79B49" stroke-width="2" /><g stroke="#E79B49" stroke-width="2" stroke-linecap="round"><line x1="24" y1="4" x2="24" y2="11" /><line x1="24" y1="37" x2="24" y2="44" /><line x1="4" y1="24" x2="11" y2="24" /><line x1="37" y1="24" x2="44" y2="24" /><line x1="10" y1="10" x2="15" y2="15" /><line x1="33" y1="33" x2="38" y2="38" /><line x1="38" y1="10" x2="33" y2="15" /><line x1="15" y1="33" x2="10" y2="38" /></g></svg>
+                            {% elif d.weather_code == 1 %}
+                            <svg viewBox="0 0 48 48" class="wi"><circle cx="17" cy="16" r="7" fill="#F2C14E" stroke="#E79B49" stroke-width="2" /><g stroke="#E79B49" stroke-width="1.8" stroke-linecap="round"><line x1="17" y1="3" x2="17" y2="7" /><line x1="3" y1="16" x2="7" y2="16" /><line x1="7" y1="6" x2="10" y2="9" /></g><path d="M13 35 a8 8 0 0 1 8-8 a9 9 0 0 1 18 2 a6 6 0 0 1 -1 12 H15 a6 6 0 0 1 -2 -6 z" fill="#FBFAF6" stroke="#7A8A7E" stroke-width="2" /></svg>
+                            {% elif d.weather_code == 2 %}
+                            <svg viewBox="0 0 48 48" class="wi"><path d="M11 34 a8 8 0 0 1 8-8 a10 10 0 0 1 20 2 a6 6 0 0 1 -1 12 H13 a6 6 0 0 1 -2 -6 z" fill="#FBFAF6" stroke="#7A8A7E" stroke-width="2" /></svg>
+                            {% else %}
+                            <svg viewBox="0 0 48 48" class="wi"><path d="M24 8 C14 8 7 16 6 24 H42 C41 16 34 8 24 8 Z" fill="#CFE3D2" stroke="#5E7A66" stroke-width="2" /><line x1="24" y1="24" x2="24" y2="38" stroke="#5E7A66" stroke-width="2" stroke-linecap="round" /><path d="M24 38 a4 4 0 0 0 8 0" fill="none" stroke="#5E7A66" stroke-width="2" stroke-linecap="round" /></svg>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        <td class="row-label">気温</td>
+                        {% for d in week %}
+                        <td>
+                            <div class="temp">
+                                <span class="tmax">{% if d.temp_max is not None %}{{ d.temp_max }}℃{% else %}—{% endif %}</span>
+                                <span class="tmin">{% if d.temp_min is not None %}{{ d.temp_min }}℃{% else %}—{% endif %}</span>
+                            </div>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        {# ========================= 戻るボタン ========================= #}
+        <div class="back-button-wrapper">
+            <button class="back-button"
+                    onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
+                戻る
+            </button>
+        </div>
+
+    </div>
+
+    {# views.charts から渡る week（7日分の集約データ）を安全に受け渡し #}
+    {{ week|json_script:"week-data" }}
+
+    <script>
+        // ============================================================
+        // 0) 設定・データ準備
+        // ============================================================
+        const week = JSON.parse(document.getElementById('week-data').textContent);
+
+        const WARNING = 1010;
+
+        const PAIN_RING  = { 1: '#6BBF7E', 2: '#E0A23C', 3: '#D15B4A' };
+        const PAIN_SIZE  = { 1: 36, 2: 40, 3: 42 };
+
+        const faceUrls = {
+            1: "{% static 'tracker/img/face_0.png' %}",
+            2: "{% static 'tracker/img/face_1.png' %}",
+            3: "{% static 'tracker/img/face_2.png' %}"
+        };
+
+        const labels = week.map(d => `${d.date_label}\n(${d.dow})`);
+
+        const levels   = week.map(d => (d.pain_level == null ? null : Number(d.pain_level)));
+        const pressure = week.map(d => (d.pressure_hpa == null ? null : Number(d.pressure_hpa)));
+
+        // ★痛みマーカーは「痛みレベル専用の軸(yPain: 0〜4)」に置く＝気圧の線とは別配置。
+        //   painPlot = 4 - level（痛くない=高い位置／すごく痛い=低い位置）。
+        //   ・気圧の高さには紐づかない → 気圧の線は実際の気圧だけを純粋に表す。
+        //   ・各猫から下へ縦の点線（painDecor）を引いて、日付と対応が読み取りやすいようにする。
+        //   ・痛みの強さは 表情・色リング・大きさ で表現。記録の無い日も Lv1(笑顔)で表示。
+        const painPlot = levels.map(l => (l == null ? null : 4 - l));
+
+        // ★整合性改善：痛み予報と同一基準（Δ降下）の日別リスクをサーバから受け取る
+        const risks    = week.map(d => d.risk || 'low');
+        const maxDrops = week.map(d => (d.max_drop == null ? null : Number(d.max_drop)));
+        const RISK_JP   = { low: '低', mid: '中', high: '高' };
+        // 痛み予報ページの急降下ゾーンと同じ配色（中=橙 / 高=赤）
+        const RISK_FILL = { mid: 'rgba(229,161,63,0.18)', high: 'rgba(217,83,79,0.16)' };
+
+        const pv = pressure.filter(v => v != null);   // Y範囲は気圧の線だけで決める（痛みは別軸）
+        const pMin = pv.length ? Math.min(...pv) : 1005;
+        const pMax = pv.length ? Math.max(...pv) : 1025;
+        const pRange  = Math.max(pMax - pMin, 6);
+        const padding = Math.max(pRange * 0.3, 3);
+        const yPMin = Math.floor(Math.min(pMin - padding, WARNING - 2));
+        const yPMax = Math.ceil(pMax + padding);
+
+        function deltaPrev(i) {
+            if (pressure[i] == null) return null;
+            for (let j = i - 1; j >= 0; j--) {
+                if (pressure[j] != null) return pressure[i] - pressure[j];
+            }
+            return null;
+        }
+
+        // ============================================================
+        // 1) プラグイン①：急降下リスク帯（痛み予報とロジック・配色を統一）
+        //    ・絶対1010の「警戒帯」は廃止し、Δ降下ベースの日別リスクを列で塗る
+        //    ・1010hPa は中立な「参考線」に格下げ（警戒表現をやめる）
+        // ============================================================
+        const riskBands = {
+            id: 'riskBands',
+            beforeDatasetsDraw(chart) {
+                const xa = chart.scales.x, ya = chart.scales.yPL, area = chart.chartArea, ctx = chart.ctx;
+                if (!xa || !ya) return;
+                const half = Math.abs(xa.getPixelForValue(1) - xa.getPixelForValue(0)) / 2 || 24;
+                ctx.save();
+                // 各日の急降下リスクを列で塗る（痛み予報の急降下ゾーンと同じ考え方）
+                risks.forEach((rk, i) => {
+                    const fill = RISK_FILL[rk];
+                    if (!fill) return;
+                    const cx = xa.getPixelForValue(i);
+                    ctx.fillStyle = fill;
+                    ctx.fillRect(cx - half, area.top, half * 2, area.bottom - area.top);
+                });
+                // 1010hPa 参考線（中立・非警戒）
+                let y10 = ya.getPixelForValue(WARNING);
+                if (y10 >= area.top && y10 <= area.bottom) {
+                    ctx.strokeStyle = 'rgba(110,125,114,0.55)';
+                    ctx.setLineDash([4, 4]); ctx.lineWidth = 1;
+                    ctx.beginPath(); ctx.moveTo(area.left, y10); ctx.lineTo(area.right, y10); ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.font = '11px "Zen Maru Gothic","Meiryo UI",sans-serif';
+                    const t = '1010hPa（低めの目安）';
+                    ctx.fillStyle = '#8A9A8E';
+                    ctx.fillText(t, area.right - ctx.measureText(t).width - 8, y10 - 5);
+                }
+                ctx.restore();
+            }
+        };
+
+        // ============================================================
+        // 2) プラグイン②：痛みの装飾（改善5）
+        // ============================================================
+        const painDecor = {
+            id: 'painDecor',
+            beforeDatasetsDraw(chart) {
+                const meta = chart.getDatasetMeta(1);
+                if (!meta || meta.hidden) return;
+                const ctx = chart.ctx;
+                const bottom = chart.chartArea.bottom;
+
+                meta.data.forEach((point, i) => {
+                    const lv = levels[i];
+                    if (lv == null) return;
+                    const x = point.x, y = point.y;
+                    const ring = PAIN_RING[lv] || '#888';
+                    const r = (PAIN_SIZE[lv] || 40) / 2 + 3;
+
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(75,107,88,0.30)';
+                    ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
+                    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, bottom); ctx.stroke();
+                    ctx.setLineDash([]);
+                    ctx.restore();
+
+                    ctx.save();
+                    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+                    ctx.fillStyle = '#fff'; ctx.fill();
+                    ctx.lineWidth = 3; ctx.strokeStyle = ring; ctx.stroke();
+                    ctx.restore();
+                });
+            }
+        };
+
+        // ============================================================
+        // 2.5) カスタムHTMLツールチップ（痛み×気圧のインサイトカード）
+        //   ・その日の「痛みの記録詳細（強さ・種類・部位・メモ・記録時刻）」＋
+        //     「気象コンテキスト（記録時の気圧・6h変化・気圧リスク・気温・天気）」を1枚に集約。
+        //   ・memo 等のユーザー入力は esc() でエスケープして XSS を防止。
+        //   ・リスク色/ラベルは既存の PAIN_RING・RISK_JP を流用（単一の真実を維持）。
+        // ============================================================
+        const RISK_COLOR = { low: '#6BBF7E', mid: '#E0A23C', high: '#D15B4A' };
+        const RISK_DESC  = { low: '安定', mid: 'やや高め', high: '注意' };
+
+        // ユーザー入力を安全にHTML化（自己入力とはいえ innerHTML 注入前に必ずエスケープ）
+        function esc(s) {
+            if (s == null) return '';
+            return String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // ツールチップ本体の div（1個だけ作って使い回す）
+        function nhTooltipEl() {
+            let el = document.getElementById('nh-tooltip');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'nh-tooltip';
+                el.className = 'nhtt';
+                document.body.appendChild(el);
+            }
+            return el;
+        }
+
+        // 痛みの強さを ●●● で可視化（レベルぶんだけ濃色）
+        function nhSeverityBar(lv) {
+            const color = PAIN_RING[lv] || '#888';
+            let dots = '';
+            for (let k = 1; k <= 3; k++) {
+                dots += '<span class="nhtt-dot" style="background:' +
+                        (k <= lv ? color : 'rgba(62,92,77,0.15)') + '"></span>';
+            }
+            return dots;
+        }
+
+        // 指定日(index)のカードHTMLを組み立てる
+        function nhBuildHTML(i) {
+            const d = week[i];
+            const lv = (d.pain_level == null) ? null : Number(d.pain_level);
+            const hasPain = !!d.has_pain;
+            const ring = hasPain ? (PAIN_RING[lv] || '#888') : '#B9C3BC';
+
+            let html = '<div class="nhtt-card" style="border-left-color:' + ring + '">';
+
+            // ── ヘッダー：日付（記録時刻の表示は削除） ──
+            html += '<div class="nhtt-head"><span class="nhtt-date">' +
+                    esc(d.date_label) + '（' + esc(d.dow) + '）</span></div>';
+
+            // ── 痛みブロック ──
+            if (hasPain) {
+                html += '<div class="nhtt-pain">' +
+                            '<span class="nhtt-lvlabel" style="color:' + ring + '">' +
+                                esc(d.pain_level_label) + '</span>' +
+                            '<span class="nhtt-bar">' + nhSeverityBar(lv) + '</span>' +
+                        '</div>';
+                if (d.pain_type) html += '<div class="nhtt-kv"><span class="nhtt-k">種類</span><span class="nhtt-v">' + esc(d.pain_type) + '</span></div>';
+                if (d.body_part) html += '<div class="nhtt-kv"><span class="nhtt-k">部位</span><span class="nhtt-v">' + esc(d.body_part) + '</span></div>';
+                if (d.memo)      html += '<div class="nhtt-kv"><span class="nhtt-k">メモ</span><span class="nhtt-v nhtt-memo">' + esc(d.memo) + '</span></div>';
+            } else {
+                html += '<div class="nhtt-norec">この日の痛みの記録はありません</div>';
+            }
+
+            // ── 気象コンテキストブロック ──
+            html += '<div class="nhtt-weather"><div class="nhtt-sectitle">その日の空模様</div>';
+
+            // 気圧（記録がある日は記録時刻の気圧、無ければ日代表値）
+            // 気圧はマーカーの高さ＝記録時刻の実測気圧に統一 → マーカー位置とツールチップが一致
+            //   （線の代表値へ無理に寄せない。記録が無い日のみ日代表 pressure_hpa を出す）
+            const p = (hasPain && d.pain_pressure != null) ? d.pain_pressure
+                      : (d.pressure_hpa != null ? d.pressure_hpa : null);
+            const pLabel = (hasPain && d.pain_pressure != null) ? '記録時の気圧' : '気圧';
+            html += '<div class="nhtt-kv"><span class="nhtt-k">' + pLabel + '</span><span class="nhtt-v">' +
+                    (p != null ? p + ' hPa' : 'データなし') + '</span></div>';
+
+            // 6h最大変化（Δ）— 痛み予報と同じ基準の注記付き
+            const dp = (d.max_drop == null) ? null : Number(d.max_drop);
+            if (dp != null) {
+                const dropTxt  = (dp > 0 ? '+' : '') + dp.toFixed(1) + ' hPa';
+                const dropNote = dp <= -4 ? '（急降下）' : (dp <= -2 ? '（下降）' : '');
+                html += '<div class="nhtt-kv"><span class="nhtt-k">6hの変化</span><span class="nhtt-v">' +
+                        dropTxt + dropNote + '</span></div>';
+            }
+
+            // 気圧リスク（低/中/高）— 色は帯・凡例と統一
+            const rk = d.risk || 'low';
+            html += '<div class="nhtt-kv"><span class="nhtt-k">気圧リスク</span><span class="nhtt-v">' +
+                    '<span class="nhtt-risk" style="background:' + (RISK_COLOR[rk] || '#888') + '">' +
+                    (RISK_JP[rk] || '低') + '</span> <span class="nhtt-riskdesc">' + (RISK_DESC[rk] || '') + '</span>' +
+                    '</span></div>';
+
+            // 気温（最高/最低）＋天気
+            const tmax = (d.temp_max != null) ? d.temp_max + '℃' : '—';
+            const tmin = (d.temp_min != null) ? d.temp_min + '℃' : '—';
+            const wl = (d.weather_label && d.weather_label !== '—') ? '　' + esc(d.weather_label) : '';
+            html += '<div class="nhtt-kv"><span class="nhtt-k">気温</span><span class="nhtt-v">' +
+                    '<span style="color:#E0764A;font-weight:700">' + tmax + '</span> / ' +
+                    '<span style="color:#4A78C0;font-weight:700">' + tmin + '</span>' + wl + '</span></div>';
+
+            html += '</div></div>';  // .nhtt-weather / .nhtt-card
+            return html;
+        }
+
+        // Chart.js から呼ばれる external ハンドラ（表示/非表示・中身・位置を制御）
+        function externalTooltipHandler(context) {
+            const chart = context.chart, tt = context.tooltip;
+            const el = nhTooltipEl();
+
+            // フェードアウト
+            if (tt.opacity === 0) { el.style.opacity = 0; return; }
+
+            // 中身（ホバー中の日インデックスからカードを生成）
+            if (tt.dataPoints && tt.dataPoints.length) {
+                el.innerHTML = nhBuildHTML(tt.dataPoints[0].dataIndex);
+            }
+
+            // 位置（ページ座標。カーソル右側に出し、右端で見切れるなら左へ反転）
+            const rect = chart.canvas.getBoundingClientRect();
+            const ttW  = el.offsetWidth || 240;
+            let left = window.scrollX + rect.left + tt.caretX + 16;
+            let top  = window.scrollY + rect.top  + tt.caretY - 12;
+
+            const viewRight = window.scrollX + document.documentElement.clientWidth;
+            if (left + ttW + 12 > viewRight) {
+                left = window.scrollX + rect.left + tt.caretX - ttW - 16;
+            }
+            if (left < window.scrollX + 6) left = window.scrollX + 6;
+
+            el.style.opacity = 1;
+            el.style.left = left + 'px';
+            el.style.top  = top + 'px';
+        }
+
+        // ============================================================
+        // 3) チャート生成
+        // ============================================================
+        const ctx = document.getElementById('painWeatherChart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: '気圧(hPa)',
+                        data: pressure,
+                        yAxisID: 'yPL',
+                        borderColor: '#E79B49',
+                        backgroundColor: 'rgba(231,155,73,0.08)',
+                        borderWidth: 3,
+                        tension: 0.45,
+                        spanGaps: false,
+                        pointRadius: 0,
+                        fill: false,
+                        order: 2
+                    },
+                    {
+                        label: '痛み',
+                        data: painPlot,
+                        yAxisID: 'yPain',
+                        showLine: false,
+                        borderWidth: 0,
+                        pointRadius:      levels.map(l => (l == null ? 0 : (PAIN_SIZE[l] / 2))),
+                        pointHoverRadius: levels.map(l => (l == null ? 0 : (PAIN_SIZE[l] / 2 + 2))),
+                        pointStyle:           levels.map(() => 'circle'),
+                        pointBackgroundColor: levels.map(l => (l == null ? 'rgba(0,0,0,0)' : PAIN_RING[l])),
+                        pointBorderColor: '#FFFFFF',
+                        pointBorderWidth: 3,
+                        order: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { left: 4, top: 10, right: 8 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        // ★カスタムHTMLツールチップ（痛み×気圧のインサイトカード）を使用。
+                        //   既定の黒box描画は止め(enabled:false)、external で自前カードを表示する。
+                        //   mode:'index' + intersect:false で「その日の列」をホバーすれば必ず出る
+                        //   （猫アイコンでも気圧線でも同じ日カードが開く）。
+                        enabled: false,
+                        mode: 'index',
+                        intersect: false,
+                        external: externalTooltipHandler
+                    }
+                },
+                scales: {
+                    x: {
+                        offset: true,
+                        grid: { display: false },
+                        ticks: { color: '#6E7D72', font: { size: 12 } }
+                    },
+                    yPL: {
+                        display: true, position: 'left',
+                        min: yPMin, max: yPMax,
+                        title: {
+                            display: true, text: '気圧 (hPa)', color: '#E79B49',
+                            font: { size: 13, weight: '700', family: '"Zen Maru Gothic", sans-serif' },
+                            padding: { bottom: 6 }
+                        },
+                        ticks: { color: '#E79B49' },
+                        grid: { color: 'rgba(231,155,73,0.15)', drawTicks: true, tickLength: 6 },
+                        border: { display: true, color: '#E79B49', width: 1.5 }
+                    },
+                    yPain: {
+                        display: false, position: 'right',
+                        min: 0, max: 4
+                    }
+                }
+            },
+            plugins: [riskBands, painDecor]
+        });
+
+        // ============================================================
+        // 4) 猫アイコンを非同期ロードして pointStyle を差し替え（改善5）
+        // ============================================================
+        [1, 2, 3].forEach(l => {
+            const s = PAIN_SIZE[l];
+            const im = new Image(s, s);
+            im.src = faceUrls[l];
+            im.onload = () => {
+                const ps = chart.data.datasets[1].pointStyle.slice();
+                levels.forEach((x, i) => { if (x === l) ps[i] = im; });
+                chart.data.datasets[1].pointStyle = ps;
+                chart.update();
+            };
+        });
+
+        // ============================================================
+        // 5) 📍 現在地：毎回自動取得 ＋ 手動ボタン
+        // ============================================================
+        //
+        // 【なぜ無限ループが起きるのか】
+        //   ページ表示時に「自動で現在地取得 → サーバ保存 → location.reload()」
+        //   としてしまうと、リロード後にまた自動取得が走り、また保存して
+        //   またリロード…と、ページが延々と再読込され続ける無限ループになる。
+        //
+        // 【どう防ぐか：座標の変化量で reload するか判定】
+        //   サーバに保存済みの座標（HTML の data-lat / data-lon）と、
+        //   いま取得した現在地を比較し、
+        //     ・約1km以上ずれた場合だけ → reload して天気/気圧を取り直す
+        //     ・ほぼ同じ場合          → reload しない（何もしない）
+        //   THRESHOLD = 0.01（緯度・経度の差で約1.1km相当）。
+        //
+        // 【なぜこれでループが止まるのか】
+        //   1回目 : 保存座標(=前回値)と現在地がズレていれば reload する。
+        //   reload後: サーバ保存済み座標 ≒ 現在地 に更新されている。
+        //   2回目 : 比較すると「ほぼ同じ」→ reload しない → ループ終了。
+        //   GPSの微小なブレ（数m〜数十m）は THRESHOLD 未満なので無視され、
+        //   ブレを拾って無駄に reload することもない。
+        //
+        // 【自動と手動の違い】
+        //   ・自動取得 (silent:true)  … ページ表示時に1回だけ実行。
+        //                               失敗しても画面にメッセージを出さない。
+        //                               変化なしなら静かに終了（reloadしない）。
+        //   ・手動ボタン (force:true) … 変化の有無に関わらず必ず reload。
+        //                               失敗時はエラーメッセージを表示。
+        //
+        // 【注意：動作条件】
+        //   ・毎回自動取得のため、ページを開くたびにブラウザの
+        //     「位置情報を許可しますか？」ダイアログが出る。
+        //   ・Geolocation は HTTPS または localhost でのみ動作する。
+        //     本番URLが http だと自動取得は無言で失敗する。
+        // ============================================================
+        (function () {
+            var card = document.getElementById('locCard');
+            var btn  = document.getElementById('getLocBtn');
+            var msg  = document.getElementById('locMsg');
+            if (!navigator.geolocation) {
+                if (msg) msg.textContent = "位置情報に非対応";
+                return;
+            }
+
+            // 約1km以上の差を「変わった」とみなす（GPSの微小ブレでのループ防止）
+            var THRESHOLD = 0.01;   // 緯度経度で約1.1km
+
+            function getCookie(name) {
+                var m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+                return m ? m.pop() : '';
+            }
+
+            // 現在地をサーバへ保存。
+            //   opts.force  = true → 変化に関わらず必ず reload（手動ボタン用）
+            //   opts.silent = true → 経過/失敗メッセージを出さない（自動取得用）
+            function saveLocation(pos, opts) {
+                opts = opts || {};
+                var lat = pos.coords.latitude;
+                var lon = pos.coords.longitude;
+                var payload = { latitude: lat, longitude: lon, accuracy: pos.coords.accuracy };
+
+                fetch("{% url 'tracker:update_location' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": getCookie("csrftoken")
+                    },
+                    body: JSON.stringify(payload)
+                })
+                .then(function (r) {
+                    // 非JSON応答でも JSON.parse で落ちないよう、まず text で受ける
+                    return r.text().then(function (t) {
+                        var d;
+                        try { d = JSON.parse(t); }
+                        catch (e) {
+                            throw new Error("サーバ応答が不正です（HTTP " + r.status + "）");
+                        }
+                        if (!r.ok || !d.ok) {
+                            throw new Error(d.error || ("保存に失敗しました（HTTP " + r.status + "）"));
+                        }
+                        return d;
+                    });
+                })
+                .then(function () {
+                    // 保存済み座標（サーバ値）と比較して、変化があれば reload
+                    var savedLat = parseFloat(card ? card.dataset.lat : "");
+                    var savedLon = parseFloat(card ? card.dataset.lon : "");
+                    var changed = isNaN(savedLat) || isNaN(savedLon)
+                                || Math.abs(savedLat - lat) > THRESHOLD
+                                || Math.abs(savedLon - lon) > THRESHOLD;
+
+                    if (opts.force || changed) {
+                        if (msg) msg.textContent = "現在地を更新しました。天気を再取得中…";
+                        setTimeout(function () { location.reload(); }, opts.force ? 1000 : 300);
+                    } else {
+                        // 変化なし＝ reload 不要（ループ防止の要）
+                        if (msg && !opts.silent) msg.textContent = "現在地は最新です";
+                        if (btn) btn.disabled = false;
+                    }
+                })
+                .catch(function (e) {
+                    // 自動時は静かに、手動時はメッセージ表示
+                    if (!opts.silent && msg) msg.textContent = "更新に失敗しました：" + e.message;
+                    if (btn) btn.disabled = false;
+                });
+            }
+
+            var GEO_OPTS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+
+            // --- 自動取得（ページ表示時・毎回） ---
+            navigator.geolocation.getCurrentPosition(
+                function (pos) { saveLocation(pos, { silent: true, force: false }); },
+                function (err) { /* 自動取得の失敗は静かに無視（画面を汚さない） */ },
+                GEO_OPTS
+            );
+
+            // --- 手動ボタン（押したら必ず更新＝強制 reload） ---
+            if (btn) {
+                btn.addEventListener('click', function () {
+                    btn.disabled = true;
+                    if (msg) msg.textContent = "現在地を取得中…";
+                    navigator.geolocation.getCurrentPosition(
+                        function (pos) { saveLocation(pos, { silent: false, force: true }); },
+                        function (err) {
+                            var t = "位置情報の取得に失敗しました";
+                            if (err.code === 1) t = "位置情報の利用が許可されませんでした";
+                            else if (err.code === 2) t = "位置を特定できませんでした";
+                            else if (err.code === 3) t = "取得がタイムアウトしました";
+                            if (msg) msg.textContent = t;
+                            btn.disabled = false;
+                        },
+                        GEO_OPTS
+                    );
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

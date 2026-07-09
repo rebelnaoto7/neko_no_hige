@@ -1,0 +1,33 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 仮想環境
+.venv/
+venv/
+
+# Django
+db.sqlite3
+*.log
+
+# 環境変数
+.env
+
+# VS / VSCode
+.vs/
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# DBバックアップ・本体（追跡しない）
+db_backup_*.sqlite3
+db.sqlite3
+
+db_backup_*.sqlite3
+db.sqlite3
+
+# 不要ファイル退避（後で物理削除）
+_trash_0626/

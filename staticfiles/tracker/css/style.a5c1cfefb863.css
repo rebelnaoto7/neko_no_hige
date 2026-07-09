@@ -1,0 +1,388 @@
+/* ============================================================
+   static/tracker/css/style.css
+   ねこのひげ - グローバルスタイルシート
+
+   【構造】このファイルは2層構成：
+     [ベース定義]   1〜23行目あたり：初期版の共通スタイル
+     [パッチ追記]   24行目以降：Pythonパッチスクリプト5本が
+                   末尾に追記してきた上書きルール群
+============================================================ */
+
+
+/* ============================================================
+   [ベース定義 #1] 基本リセット
+   ------------------------------------------------------------
+   margin/padding をゼロ初期化＋box-sizing統一の定番ルール。
+============================================================ */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Meiryo UI", "Hiragino Sans", sans-serif;
+    background: #2d4a3e;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+
+/* ============================================================
+   [ベース定義 #2] ホーム画面（.home）
+   ------------------------------------------------------------
+   ::before/::after で肉球の帯を斜めに配置する装飾。
+   pointer-events:none でクリック通過、white-space:pre で間隔維持。
+============================================================ */
+.home {
+    position: relative;
+    min-height: 100vh;
+    padding: 40px 20px;
+    overflow: hidden;
+}
+
+    .home::before, .home::after {
+        content: "🐾  🐾  🐾  🐾  🐾  🐾  🐾  🐾";
+        position: absolute;
+        font-size: 28px;
+        opacity: 0.15;
+        pointer-events: none;
+        white-space: pre;
+        color: #a0c0a0;
+        letter-spacing: 80px;
+    }
+
+    .home::before {
+        top: 5%;
+        left: -5%;
+        transform: rotate(-15deg);
+    }
+    /* 左上から斜め走り */
+    .home::after {
+        bottom: 5%;
+        right: -10%;
+        transform: rotate(20deg);
+    }
+/* 右下で逆向き */
+.home-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+/* 装飾より前面 */
+
+
+/* ============================================================
+   [ベース定義 #3] 中央の猫アイコン（初期：CSSで描く橙色の円）
+   ※ 後段の[パッチ#3]で image 表示用に書き換えられている
+============================================================ */
+.cat-icon {
+    width: 140px;
+    height: 140px;
+    background: #d89060;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 72px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+
+
+/* ============================================================
+   [ベース定義 #4] ロゴ「ねこのひげ」（左右に≲のひげ装飾）
+============================================================ */
+.logo {
+    font-size: 72px;
+    font-weight: bold;
+    letter-spacing: 8px;
+    margin-bottom: 16px;
+    display: inline-block;
+}
+
+    .logo::before, .logo::after {
+        content: "≲";
+        color: #fff;
+        margin: 0 20px;
+        font-size: 48px;
+        opacity: 0.8;
+    }
+
+.subtitle {
+    font-size: 18px;
+    color: #e0e0e0;
+    margin-bottom: 12px;
+}
+
+.subtitle-divider {
+    width: 240px;
+    height: 2px;
+    background: #c0a070;
+    margin: 12px auto 40px;
+}
+/* 金色の細い仕切り線 */
+
+
+/* ============================================================
+   [ベース定義 #5] メニュー（2列グリッド）
+============================================================ */
+.menu {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 60px;
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+.menu-item {
+    font-size: 22px;
+    color: #f0d878;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    display: inline-block;
+}
+
+    .menu-item:hover {
+        color: #ffeb98;
+    }
+
+    .menu-item::before {
+        content: "🐾";
+        margin-right: 10px;
+        text-decoration: none;
+        display: inline-block;
+    }
+/* 肉球マーカー */
+
+
+/* ============================================================
+   [ベース定義 #6] 右下の猫＋吹き出し
+   ※ .cat-corner-img と .speech-bubble は後段パッチで大幅上書き
+============================================================ */
+.cat-corner {
+    position: fixed;
+    bottom: 0;
+    right: 30px;
+    z-index: 10;
+    animation: slideUp 1.2s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+/* 下から滑り上がり */
+.cat-corner-img {
+    width: 180px;
+    height: 180px;
+    background: #f5d8b8;
+    border-radius: 50% 50% 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 90px;
+    box-shadow: 0 -4px 12px rgba(0,0,0,.2);
+}
+
+.speech-bubble {
+    position: absolute;
+    bottom: 150px;
+    right: 180px;
+    background: #b8d8d0;
+    color: #2d4a3e;
+    padding: 20px 24px;
+    border-radius: 20px;
+    font-size: 16px;
+    text-align: center;
+    min-width: 140px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+    .speech-bubble::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        right: 30px;
+        border: 12px solid transparent;
+        border-top-color: #b8d8d0;
+        border-bottom: 0;
+    }
+    /* 下向き三角のしっぽ */
+    .speech-bubble .time {
+        font-size: 28px;
+        color: #d04a4a;
+        font-weight: bold;
+        display: block;
+        margin: 4px 0;
+    }
+
+
+/* ============================================================
+   [ベース定義 #7] 共通ヘッダー（他ページ用）
+============================================================ */
+.header {
+    background: #2d4a3e;
+    padding: 16px 30px;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+
+.header-logo {
+    color: #fff;
+    font-size: 28px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-decoration: none;
+}
+
+.header-nav a {
+    color: #f0d878;
+    text-decoration: underline;
+    margin-right: 30px;
+    font-size: 16px;
+}
+
+    .header-nav a::before {
+        content: "🐾 ";
+    }
+
+
+/* ============================================================
+   [ベース定義 #8] ページ共通本体
+============================================================ */
+.page-body {
+    background: #e8e4d8;
+    color: #333;
+    min-height: calc(100vh - 70px);
+    padding: 40px 20px;
+}
+
+
+/* ============================================================================
+   ↓↓↓ ここから下はパッチスクリプトによる末尾追記（5本分） ↓↓↓
+   各セクションのコメント行 "=== xxx ===" が冪等判定の目印になっているため、
+   コメント文言の変更は禁止（パッチ再実行で重複追記が起きる）
+============================================================================ */
+
+
+/* === 右下の猫を neko.png に上書き === */
+/* パッチ#4：replace_corner_cat_image.py が追記
+   意図：[ベース#6] の .cat-corner-img（橙色の半円）を打ち消し、
+        中の <img neko.png> をそのまま表示するための上書き
+   !important が必須なのは [ベース#6] に確実に勝つため */
+.cat-corner-img {
+    width: 220px;
+    height: 220px;
+    background: transparent !important; /* [ベース#6] の #f5d8b8 を打ち消し */
+    border-radius: 0 !important; /* 半円を打ち消し */
+    box-shadow: none !important;
+    display: flex;
+    align-items: flex-end; /* 画像を下揃え（地面に立つ感じ） */
+    justify-content: center;
+    overflow: hidden;
+    font-size: 0; /* 中の絵文字（旧仕様）を非表示にする保険 */
+}
+
+    .cat-corner-img img {
+        width: 100%;
+        height: auto;
+        display: block;
+    }
+
+
+/* === 吹き出し遅延表示 === */
+/* パッチ#1：add_speech_bubble_animation.py が追記
+   意図：ページ表示から2秒後にふわっと吹き出しを出現させるアニメ
+   ※ 後段のパッチ#5 でも .speech-bubble に !important で位置上書きされる */
+.speech-bubble {
+    opacity: 0;
+    animation: bubbleAppear 0.6s ease-out 2s forwards;
+    /*           ↑時間  ↑カーブ      ↑遅延 ↑終了状態を保持 */
+}
+
+@keyframes bubbleAppear {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.8);
+    }
+    /* 下から少し小さく */
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    /* 元位置に等倍 */
+}
+
+
+/* === 中央の猫アイコン画像化 === */
+/* パッチ#3：replace_center_cat_icon.py が追記
+   意図：[ベース#3] の .cat-icon（橙色の円形枠＋絵文字）を打ち消し、
+        <img cat_logo.png> を円形にトリミング表示するための上書き */
+.cat-icon {
+    background: transparent !important; /* [ベース#3] の #d89060 を打ち消し */
+    box-shadow: none !important;
+    padding: 0 !important;
+    overflow: hidden;
+    border-radius: 50%; /* 円形クリップ維持 */
+}
+
+    .cat-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* アスペクト比維持で枠いっぱい */
+        display: block;
+        border-radius: 50%;
+    }
+
+
+/* === ホーム画面レイアウト調整 === */
+/* パッチ#5：adjust_home_layout.py が追記
+   意図：上部余白を確保、ロゴ・アイコン・メニューを縦に綺麗に並べる */
+.home-inner {
+    padding-top: 80px; /* 上部に余白（ステータスバー直下対策） */
+}
+
+.cat-icon {
+    display: block !important; /* インラインから block に変えて margin auto を効かせる */
+    margin: 0 auto 24px !important; /* 水平センタリング＋下余白 */
+}
+
+.logo {
+    display: block !important;
+    margin: 0 auto 16px !important;
+}
+
+.menu {
+    margin-top: 60px !important; /* タイトル群から距離を取って視覚分離 */
+}
+
+
+/* === 吹き出しを猫の頭の上に配置 === */
+/* パッチ#2：position_speech_bubble.py が追記
+   意図：[ベース#6] の .speech-bubble（bottom:150px right:180px）を打ち消し、
+        猫の頭の真上（bottom:230px right:40px）に再配置
+   ※ パッチ#1 の opacity/animation はそのまま生きる（上書きされない） */
+.speech-bubble {
+    position: absolute !important;
+    bottom: 230px !important; /* 猫画像220pxの頭の真上 */
+    right: 40px !important;
+    left: auto !important; /* left指定があれば打ち消し */
+    z-index: 20 !important;
+}
+
+    .speech-bubble::after {
+        bottom: -12px !important; /* しっぽが下に飛び出す */
+        right: 80px !important; /* 猫の頭側を指す位置 */
+        left: auto !important;
+    }

@@ -1,0 +1,1501 @@
+{% load static %}
+
+{# ============================================================ #}
+
+{# templates/tracker/pain_create.html                            #}
+
+{# ねこのひげ - 痛み記録の新規入力画面                            #}
+
+{# 【2026-06-25 改修③ / 谷藤】猫の動きを修正       　　　 　　  #}
+
+{#  ・2枚の画像を交互に表示させ歩いている風にする   　　　　　　  #}
+
+{#  ・画面両枠外でターン                        　　　　　　　　  #}
+
+{#  ・右側まで歩く → ターン→画像の位置で止まる → 吹き出し表示   #}
+
+{#  ・猫、吹き出しの大きさと表示位置を調整    　　　　　　　　　  #}
+
+{# 【2026-06-19 改修②】レイアウト中央化＋履歴ボタン移動          #}
+
+{#  ・.layout を 2カラムグリッド → 中央寄せ flex に変更           #}
+
+{#    （フォームが画面中央に配置される）                         #}
+
+{#  ・.form-card の justify-self:end（右寄せ）を削除              #}
+
+{#  ・右サイドペイン を撤去                  #}
+
+    {#  ・履歴ボタンを画面下の「戻る」ボタンの右隣に移動              #}
+
+    {#    （.bottom-actions = flex 横並び・中央揃え）                #}
+
+    {# 【2026-06-19 改修①】履歴ボタンをサイズダウン                  #}
+
+    {#  ・font-size 34px→18px / padding 36px64px→12px28px            #}
+
+    {# 【2026-06-17 改修】                                            #}
+
+    {# 1) 痛みレベルをスライダー→ラジオボタン化（猫アイコンクリック式）#}
+
+    {# 2) レベル1(痛くない)の時は「どんな不調?」セクション非表示      #}
+
+    {# 3) 戻るボタンを画面下部に追加（B方式）                         #}
+
+    {# 4) ヘッダーメニューを charts と統一                            #}
+
+    {# 5) 猫を画面下部に移動し、左右に歩くアニメーション化            #}
+
+    {# ============================================================ #}
+
+    <!DOCTYPE html>
+
+    <html lang="ja">
+
+    <head>
+
+        <meta charset="UTF-8">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <title>痛みの記録 | ねこのひげ</title>
+
+
+
+        <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+
+
+        <style>
+
+            /* ============================================================ */
+
+            /* デザイントークン                                              */
+
+            /* ============================================================ */
+
+            :root {
+                --bg: #E0DBD0;
+                --header: #33503F;
+                --header-ink: #F2E7CB;
+                --card: #FFFFFF;
+                --ink: #3E5C4D;
+                --ink-soft: #6E7D72;
+                --orange: #E79B49;
+                --green: #4B6B58;
+                --mint: #7FA593;
+                --bubble: #EFEEEA;
+                --select-ring: #4B6B58; /* ★選択中の猫の枠色 */
+            }
+
+
+
+            * {
+                box-sizing: border-box;
+            }
+
+
+
+            body {
+                margin: 0;
+                background: var(--bg);
+                font-family: "Zen Maru Gothic","Meiryo UI",sans-serif;
+                color: var(--ink);
+                /* ★歩く猫が画面下に固定されるので、下に余白を確保
+
+                 */
+
+                padding-bottom: 150px;
+            }
+
+
+
+            /* ============================================================ */
+
+            /* サイトヘッダー                                                */
+
+            /* ============================================================ */
+
+            .site-header {
+                background: var(--header);
+                padding: 12px 28px;
+                display: flex;
+                align-items: center;
+                gap: 28px;
+            }
+
+
+
+            .brand img {
+                height: 46px;
+                display: block;
+            }
+
+
+
+            /* ============================================================ */
+
+            /* ★ナビメニュー（charts と統一）                               */
+
+            /* ============================================================ */
+
+            .site-nav {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+            }
+
+
+
+                .site-nav a {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    color: var(--header-ink);
+                    text-decoration: none;
+                    font-weight: 500;
+                    font-size: 15px;
+                    padding: 8px 16px;
+                    border-radius: 999px; /* pill形状 */
+
+                    transition: background 0.2s, color 0.2s;
+                }
+
+
+
+                    .site-nav a .nav-paw {
+                        width: 16px;
+                        height: 16px;
+                        opacity: 0.85;
+                    }
+
+
+
+                    .site-nav a:hover {
+                        background: rgba(255,255,255,0.12);
+                    }
+
+
+
+                    .site-nav a.active {
+                        background: var(--orange);
+                        color: #fff;
+                        font-weight: 700;
+                    }
+
+
+
+                        .site-nav a.active .nav-paw {
+                            opacity: 1;
+                            filter: brightness(0) invert(1);
+                        }
+
+
+
+            /* ============================================================ */
+
+            /* ★メインレイアウト（2026-06-19 改修：中央1カラム）            */
+
+            /*   旧：grid 2カラム（フォーム＋右サイド履歴）                  */
+
+            /*   新：flex 中央寄せ。フォームだけを画面中央に配置             */
+
+            /* ============================================================ */
+
+            .layout {
+                display: flex;
+                justify-content: center; /* フォームを水平中央に */
+
+                max-width: 1100px;
+                margin: 32px auto;
+                padding: 0 24px;
+            }
+
+
+
+            /* ============================================================ */
+
+            /* 入力カード（中央配置）                                        */
+
+            /* ============================================================ */
+
+            .form-card {
+                background: var(--card);
+                border-radius: 14px;
+                padding: 24px 28px;
+                box-shadow: 0 4px 18px rgba(0,0,0,.06);
+                max-width: 520px;
+                justify-self: end;
+                width: 100%;
+            }
+
+
+
+            .field {
+                margin-bottom: 18px;
+            }
+
+
+
+                .field label {
+                    display: block;
+                    font-weight: 700;
+                    margin-bottom: 8px;
+                    font-size: 15px;
+                }
+
+
+
+                .field input[type="date"],
+                .field input[type="text"],
+                .field select,
+                .field textarea {
+                    width: 100%;
+                    padding: 10px 12px;
+                    border: 1px solid #D6D2C8;
+                    border-radius: 8px;
+                    font-size: 15px;
+                    font-family: inherit;
+                    background: #FFF;
+                    color: var(--ink);
+                }
+
+
+
+                .field textarea {
+                    resize: vertical;
+                    min-height: 88px;
+                }
+
+
+
+                .field input[readonly] {
+                    background: #F7F5EE;
+                    color: var(--ink-soft);
+                }
+
+
+
+
+
+            /* ============================================================ */
+
+            /* ★痛みレベル：ラジオボタン化（猫アイコンクリック式）           */
+
+            /* ============================================================ */
+
+            .level-radios {
+                display: flex;
+                justify-content: space-around;
+                align-items: center;
+                gap: 12px;
+                padding: 10px 6px;
+            }
+
+
+
+                .level-radios input[type="radio"] {
+                    position: absolute;
+                    opacity: 0;
+                    pointer-events: none;
+                    width: 0;
+                    height: 0;
+                }
+
+
+
+                .level-radios label {
+                    cursor: pointer;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 6px;
+                    padding: 8px 10px;
+                    border-radius: 16px;
+                    border: 2px solid transparent;
+                    transition: all 0.2s ease;
+                    user-select: none;
+                }
+
+
+
+                    .level-radios label:hover {
+                        background: #F7F5EE;
+                    }
+
+
+
+                .level-radios .face {
+                    width: 56px;
+                    height: 56px;
+                    border-radius: 50%;
+                    background: #F1ECE2;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+
+
+                    .level-radios .face img {
+                        width: 56px;
+                        height: 56px;
+                        display: block;
+                    }
+
+
+
+                .level-radios .face-label {
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: var(--ink-soft);
+                }
+
+
+
+                .level-radios input[type="radio"]:checked + label {
+                    background: #EAF1EC;
+                    border-color: var(--select-ring);
+                    box-shadow: 0 2px 8px rgba(75,107,88,0.15);
+                }
+
+
+
+                    .level-radios input[type="radio"]:checked + label .face-label {
+                        color: var(--select-ring);
+                        font-weight: 700;
+                    }
+
+
+
+                .level-radios input[type="radio"]:focus-visible + label {
+                    outline: 2px solid var(--orange);
+                    outline-offset: 2px;
+                }
+
+
+
+            /* ============================================================ */
+
+            /* ★「どんな不調?」セクション（初期は非表示）                    */
+
+            /* ============================================================ */
+
+            #pain_type_section {
+                display: none;
+            }
+
+
+
+            /* ============================================================ */
+
+            /* 登録ボタン                                                    */
+
+            /* ============================================================ */
+
+            .submit-btn {
+                width: 100%;
+                background: var(--orange);
+                color: #FFF;
+                font-weight: 700;
+                font-size: 16px;
+                padding: 14px;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                letter-spacing: .05em;
+            }
+
+
+
+                .submit-btn:hover {
+                    filter: brightness(.95);
+                }
+
+
+
+            /* ============================================================ */
+
+            /* ★履歴ボタン（小型pill）                                       */
+
+            /*   下部アクション行で「戻る」ボタンの右隣に並ぶ                */
+
+            /* ============================================================ */
+
+            .history-btn {
+                background: var(--mint);
+                color: #FFF;
+                font-weight: 700;
+                font-size: 18px;
+                text-decoration: none;
+                padding: 13px 32px; /* 戻るボタンと高さを揃える */
+
+                border-radius: 999px;
+                letter-spacing: .1em;
+                box-shadow: 0 4px 14px rgba(0,0,0,.08);
+            }
+
+
+
+                .history-btn:hover {
+                    filter: brightness(.95);
+                }
+
+
+
+            /* ============================================================ */
+
+            /* ★下部アクション行（2026-06-19 改修）                          */
+
+            /*   旧：.back-button-wrapper（戻るボタン1個・text-align:center）*/
+
+            /*   新：戻る＋履歴を flex で横並び・中央揃え                    */
+
+            /* ============================================================ */
+
+            .bottom-actions {
+                display: flex;
+                justify-content: center; /* 2つのボタンを中央に */
+
+                align-items: center; /* 高さの違いを吸収 */
+
+                gap: 16px; /* ボタン間の間隔 */
+
+                margin: 8px 0 48px;
+                flex-wrap: wrap; /* 狭い画面では折り返す */
+            }
+
+
+
+            .back-button {
+                padding: 14px 42px;
+                font-size: 18px;
+                font-weight: 700;
+                border-radius: 999px;
+                border: none;
+                background: var(--orange);
+                color: #fff;
+                font-family: "Zen Maru Gothic", sans-serif;
+                cursor: pointer;
+                transition: 0.2s;
+            }
+
+
+
+                .back-button:hover {
+                    opacity: 0.85;
+                }
+
+
+
+            /* ============================================================ */
+
+            /* ★歩く猫（画面下部を左右に往復）                               */
+
+            /* ・position:fixed で画面最下部に固定                           */
+
+            /* ・walk アニメで left端 ⇔ right端 を往復                       */
+
+            /* ・進行方向に合わせて scaleX で向きを反転                      */
+
+            /*   （元画像は「左向き」。右へ進む時だけ反転して右向きに）      */
+
+            /* ・pointer-events:none でフォーム操作を邪魔しない              */
+
+            /* ============================================================ */
+
+
+
+
+
+            /* ふわっと上下する歩行感（任意の微演出） */
+
+            .cat-walker img {
+                display: block;
+                width: 100%;
+                height: auto;
+                animation: catBob 0.5s ease-in-out infinite alternate;
+            }
+
+
+
+
+
+
+
+            /* ============================================================ */
+
+            /* ★歩く猫（JS制御版）                                          */
+
+            /* ============================================================ */
+
+            .cat-walker {
+                position: fixed;
+                bottom: 20px;
+                left: 0;
+                width: 400px !important; /* 猫のサイズ */
+
+                height: auto;
+                z-index: 1000;
+                pointer-events: none;
+                will-change: transform;
+                transition: none;
+            }
+
+
+
+                .cat-walker img {
+                    display: block;
+                    width: 100%;
+                    height: auto;
+                    animation: catBob 0.5s ease-in-out infinite alternate;
+                }
+
+
+
+            /* ふわっと上下する歩行感 */
+
+            @keyframes catBob {
+
+                from {
+                    transform: translateY(0);
+                }
+
+
+
+                to {
+                    transform: translateY(-3px);
+                }
+            }
+
+
+
+            /* ============================================================ */
+
+            /* ★吹き出しPNG                                                  */
+
+            /* ============================================================ */
+
+            .cat-balloon {
+                position: fixed;
+                z-index: 1001;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.35s ease;
+                will-change: left, top, opacity;
+            }
+
+
+
+                .cat-balloon img {
+                    display: block;
+                    width: 420px;
+                    height: auto;
+                }
+
+
+
+                .cat-balloon.show {
+                    opacity: 1;
+                }
+
+
+
+            /* ============================================================ */
+
+            /* レスポンシブ：猫・吹き出し                                    */
+
+            /* ============================================================ */
+
+            @media (max-width: 880px) {
+
+                .cat-walker {
+                    width: 400px;
+                }
+
+
+
+                .cat-balloon img {
+                    width: 300px;
+                }
+            }
+
+
+
+            /* スマホでは猫を少し小さく＋専用keyframesに差し替え。
+
+                ※@keyframesはグローバルなので同名再定義は禁止。
+
+                  別名(catWalkMobile)にして衝突を回避する。 */
+
+            .cat-walker {
+                width: 250px;
+                animation: catWalkMobile 24s linear infinite;
+            }
+
+
+
+            .cat-balloon img {
+                width: 300px;
+            }
+
+            }
+
+
+
+            /* スマホ用の歩行keyframes（端の余白を110pxに合わせる） */
+
+            @keyframes catWalkMobile {
+
+                0% {
+                    transform: translateX(0) scaleX(-1);
+                }
+
+
+
+                48% {
+                    transform: translateX(calc(100vw - 110px)) scaleX(-1);
+                }
+
+
+
+                50% {
+                    transform: translateX(calc(100vw - 110px)) scaleX(1);
+                }
+
+
+
+                98% {
+                    transform: translateX(0) scaleX(1);
+                }
+
+
+
+                100% {
+                    transform: translateX(0) scaleX(-1);
+                }
+            }
+        </style>
+
+    </head>
+
+    <body>
+
+
+
+        {# ============================================================ #}
+
+        {# サイトヘッダー（現在ページ＝痛みの記録を .active で強調）       #}
+
+        {# ============================================================ #}
+
+        <header class="site-header">
+
+            <a href="{% url 'tracker:home' %}" class="brand">
+
+                <img src="{% static 'tracker/img/cat_logo.png' %}" alt="ねこのひげ">
+
+            </a>
+
+            <nav class="site-nav">
+
+                <a href="{% url 'tracker:pain_create' %}" class="active">
+
+                    <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+
+                    痛みの記録
+
+                </a>
+
+                <a href="{% url 'tracker:charts' %}">
+
+                    <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+
+                    見える化
+
+                </a>
+
+                <a href="{% url 'tracker:weather_risk' %}">
+
+                    <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+
+                    痛み予報
+
+                </a>
+
+               
+                <a href="{% url 'tracker:reminder' %}">
+
+                    <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+
+                    リマインダー設定
+
+                </a>
+
+            </nav>
+
+        </header>
+
+
+
+        {# ============================================================ #}
+
+        {# メインレイアウト（中央1カラム）                              #}
+
+        {# ============================================================ #}
+
+        <main class="layout">
+
+
+
+            <form class="form-card" method="post" action="{% url 'tracker:pain_create' %}">
+
+                {% csrf_token %}
+
+
+
+                {# ---- 日付 ---- #}
+
+                <div class="field">
+
+                    <label for="recorded_date">日付</label>
+
+                    <input type="date" id="recorded_date" name="recorded_date"
+                           value="{{ today }}" required>
+
+                </div>
+
+
+
+                {# ---- 痛みレベル：ラジオボタン化 ---- #}
+
+                <div class="field">
+
+                    <label>痛みレベル</label>
+
+                    <div class="level-radios">
+
+
+
+                        {# 痛くない（初期選択） #}
+
+                        <input type="radio" id="level_1" name="level" value="1" checked>
+
+                        <label for="level_1">
+
+                            <div class="face">
+
+                                <img src="{% static 'tracker/img/face_0.png' %}" alt="痛くない"
+                                     onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'😺',style:'font-size:32px;'}));">
+
+                            </div>
+
+                            <span class="face-label">痛くない</span>
+
+                        </label>
+
+
+
+                        {# ちょっと痛い #}
+
+                        <input type="radio" id="level_2" name="level" value="2">
+
+                        <label for="level_2">
+
+                            <div class="face">
+
+                                <img src="{% static 'tracker/img/face_1.png' %}" alt="ちょっと痛い"
+                                     onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'😿',style:'font-size:32px;'}));">
+
+                            </div>
+
+                            <span class="face-label">ちょっと痛い</span>
+
+                        </label>
+
+
+
+                        {# すごく痛い #}
+
+                        <input type="radio" id="level_3" name="level" value="3">
+
+                        <label for="level_3">
+
+                            <div class="face">
+
+                                <img src="{% static 'tracker/img/face_2.png' %}" alt="すごく痛い"
+                                     onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'🙀',style:'font-size:32px;'}));">
+
+                            </div>
+
+                            <span class="face-label">すごく痛い</span>
+
+                        </label>
+
+
+
+                    </div>
+
+                </div>
+
+
+
+                {# ---- 気圧 ---- #}
+
+                <div class="field">
+
+                    <label for="pressure_display">気圧(hPa)</label>
+
+                    <input type="text" id="pressure_display"
+                           value="{% if current_pressure %}{{ current_pressure }}{% endif %}"
+                           placeholder="自動取得中..." readonly>
+
+                </div>
+
+
+
+                {# ---- 「どんな不調?」セクション ---- #}
+
+                <div class="field" id="pain_type_section">
+
+                    <label for="pain_type">どんな不調?</label>
+
+                    <select id="pain_type" name="pain_type">
+
+                        <option value="">選択してください</option>
+
+                        {% for v, label in pain_type_choices %}
+
+                        <option value="{{ v }}">{{ label }}</option>
+
+                        {% endfor %}
+
+                    </select>
+
+
+
+                    {# 「その他」選択時のみ表示される自由記述欄 #}
+
+                    <div id="other_wrap" style="display: none; margin-top: 10px;">
+
+                        <input type="text"
+                               id="pain_type_other"
+                               name="pain_type_other"
+                               maxlength="50"
+                               placeholder="不調を自由に入力（最大50文字）">
+
+                    </div>
+
+                </div>
+
+
+
+                {# ---- メモ ---- #}
+
+                <div class="field">
+
+                    <label for="memo">ひとこと日記・メモ</label>
+
+                    <textarea id="memo" name="memo" maxlength="140"
+                              placeholder="例: 朝から頭が重い…"></textarea>
+
+                </div>
+
+
+
+                <button type="submit" class="submit-btn">これで登録</button>
+
+            </form>
+
+
+
+        </main>
+
+
+
+        {# ============================================================ #}
+
+        {# ★下部アクション行（戻る ＋ 履歴 を横並び・中央）               #}
+
+        {#   履歴ボタンを戻るボタンの右隣に配置                          #}
+
+        {# ============================================================ #}
+
+        <div class="bottom-actions">
+
+            <button class="back-button"
+                    onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
+
+                戻る
+
+            </button>
+
+            <a href="{% url 'tracker:pain_history' %}" class="history-btn">履歴</a>
+
+        </div>
+
+
+
+
+
+        {# ============================================================ #}
+
+        {# ★歩く猫（画面下部を左右に往復）                               #}
+
+        {# ============================================================ #}
+
+        <div class="cat-walker" id="catWalker">
+
+            <img id="catWalkerImg"
+                 src="{% static 'tracker/img/cat_walk_1.png' %}"
+                 alt="歩く猫">
+
+        </div>
+
+
+
+        <!-- 吹き出しPNG -->
+
+        <div class="cat-balloon" id="catBalloon">
+
+            <img src="{% static 'tracker/img/cat_balloon.png' %}" alt="吹き出し">
+
+        </div>
+
+
+
+        {# ============================================================ #}
+
+        {# JavaScript                                                    #}
+
+        {# ============================================================ #}
+
+        <script>
+
+            // ============================================================
+
+            // 要素取得
+
+            // ============================================================
+
+            const levelRadios = document.querySelectorAll('input[name="level"]');
+
+            const painTypeSection = document.getElementById('pain_type_section');
+
+            const painTypeSelect = document.getElementById('pain_type');
+
+            const otherWrap = document.getElementById('other_wrap');
+
+            const otherInput = document.getElementById('pain_type_other');
+
+
+
+            // ============================================================
+
+            // ★痛みレベルに応じて「どんな不調?」セクションを表示/非表示
+
+            // ============================================================
+
+            function togglePainTypeSection() {
+
+                const selected = document.querySelector('input[name="level"]:checked');
+
+                const level = selected ? parseInt(selected.value) : 1;
+
+
+
+                if (level === 1) {
+
+                    painTypeSection.style.display = 'none';
+
+                    painTypeSelect.removeAttribute('required');
+
+                    painTypeSelect.value = '';
+
+
+
+                    otherWrap.style.display = 'none';
+
+                    otherInput.removeAttribute('required');
+
+                    otherInput.value = '';
+
+                } else {
+
+                    painTypeSection.style.display = 'block';
+
+                    painTypeSelect.setAttribute('required', '');
+
+                }
+
+            }
+
+
+
+            // ============================================================
+
+            // 「その他」選択時のみ自由記述欄を表示（既存ロジック温存）
+
+            // ============================================================
+
+            function toggleOther() {
+
+                if (painTypeSelect.value === "その他") {
+
+                    otherWrap.style.display = "block";
+
+                    otherInput.required = true;
+
+                } else {
+
+                    otherWrap.style.display = "none";
+
+                    otherInput.required = false;
+
+                    otherInput.value = "";
+
+                }
+
+            }
+
+
+
+            // ============================================================
+
+            // イベントリスナー登録
+
+            // ============================================================
+
+            levelRadios.forEach(radio => {
+
+                radio.addEventListener('change', togglePainTypeSection);
+
+            });
+
+
+
+            painTypeSelect.addEventListener('change', toggleOther);
+
+
+
+            // 初期表示（ページロード時に1回実行）
+
+            togglePainTypeSection();
+
+            toggleOther();
+
+        </script>
+
+
+
+
+
+
+
+
+
+
+
+        <script>
+
+            window.addEventListener("load", () => {
+
+                const catBox = document.getElementById("catWalker");
+
+                const catImg = document.getElementById("catWalkerImg");
+
+                const balloon = document.getElementById("catBalloon");
+
+
+
+                if (!catBox || !catImg || !balloon) {
+
+                    return;
+
+                }
+
+
+
+                /* ★猫の歩行フレーム画像
+
+                    cat_walk_1.png と cat_walk_2.png を交互に表示する     */
+
+
+
+                const catFrames = [
+
+                    "{% static 'tracker/img/cat_walk_1.png' %}",
+
+                    "{% static 'tracker/img/cat_walk_2.png' %}"
+
+                ];
+
+
+
+                let currentFrame = 0;
+
+                let frameTimer = 0;
+
+                const frameInterval = 260; // 足の切り替え速度。小さいほど速い
+
+
+
+                // 画像を先読みしてチラつきを減らす
+
+                catFrames.forEach(src => {
+
+                    const img = new Image();
+
+                    img.src = src;
+
+                });
+
+
+
+                let x = 0;                 // 猫の現在位置
+
+                let direction = 1;         // 1 = 右へ進む, -1 = 左へ進む
+
+                let state = "walking";     // walking / pauseBeforeBalloon / showingBalloon
+
+                let stateStart = 0;
+
+                let lastTime = 0;
+
+                let stopTriggered = false; // 右下停止イベントを1往復につき1回だけ発生させる
+
+
+
+                const speed = 100;         // 猫の移動速度 px/秒
+
+
+
+                function getCatWidth() {
+
+                    return catBox.offsetWidth || 320;
+
+                }
+
+
+
+                function getMaxX() {
+
+                    return window.innerWidth - getCatWidth();
+
+                }
+
+
+
+                function getStopX() {
+
+                    // 数字を大きくすると左へ、小さくすると右へ止まる
+
+                    const stopFromRight = 180;
+
+                    return window.innerWidth - getCatWidth() - stopFromRight;
+
+                }
+
+
+
+                function updateCatFrame(deltaMs) {
+
+                    if (state !== "walking") return;
+
+
+
+                    frameTimer += deltaMs;
+
+
+
+                    if (frameTimer >= frameInterval) {
+
+                        frameTimer = 0;
+
+                        currentFrame = (currentFrame + 1) % catFrames.length;
+
+                        catImg.src = catFrames[currentFrame];
+
+                    }
+
+                }
+
+
+
+                function updateCatTransform() {
+
+                    /*
+
+                        元画像は左向き前提。
+
+                        右へ進むときだけ反転して右向きにする。
+
+                    */
+
+                    const scaleX = direction === 1 ? -1 : 1;
+
+                    catBox.style.transform = `translateX(${x}px) scaleX(${scaleX})`;
+
+                }
+
+
+
+                function updateBalloonPosition() {
+
+                    const catRect = catBox.getBoundingClientRect();
+
+                    const balloonWidth = balloon.offsetWidth || 420;
+
+                    const balloonHeight = balloon.offsetHeight || 220;
+
+
+
+                    /*
+
+                        吹き出し位置：
+
+                        猫の少し上、少し右に出す
+
+                    */
+
+                    balloonLeft = catRect.left + 80;
+
+                    balloonTop = catRect.top - balloonHeight + 20;
+
+
+
+
+
+                    // 画面外にはみ出さないよう補正
+
+                    // balloonLeft = Math.max(
+
+                    //     10,
+
+                    //     Math.min(balloonLeft, window.innerWidth - balloonWidth - 10)
+
+                    // );
+
+
+
+
+
+                    balloonTop = Math.max(10, balloonTop);
+
+
+
+                    balloon.style.left = `${balloonLeft}px`;
+
+                    balloon.style.top = `${balloonTop}px`;
+
+                }
+
+
+
+                function showBalloon() {
+
+                    updateBalloonPosition();
+
+                    balloon.classList.add("show");
+
+                }
+
+
+
+                function hideBalloon() {
+
+                    balloon.classList.remove("show");
+
+                }
+
+
+
+                function animate(timestamp) {
+
+                    if (!lastTime) lastTime = timestamp;
+
+
+
+                    const deltaMs = timestamp - lastTime;
+
+                    const delta = deltaMs / 1000;
+
+                    lastTime = timestamp;
+
+
+
+                    const maxX = getMaxX();
+
+                    const stopX = getStopX();
+
+
+
+                    if (state === "walking") {
+
+
+
+                        updateCatFrame(deltaMs);
+
+
+
+                        x += direction * speed * delta;
+
+
+
+                        // 右端まで行ったらターンして左向きにする
+
+                        if (x >= maxX + 500) {
+
+                            x = maxX + 500;
+
+                            direction = -1;
+
+                            stopTriggered = false;
+
+                        }
+
+
+
+                        // ターン後、左向きで少し戻った位置で止まる
+
+                        if (direction === -1 && !stopTriggered && x <= stopX) {
+
+                            x = stopX;
+
+                            state = "pauseBeforeBalloon";
+
+                            stateStart = timestamp;
+
+                            stopTriggered = true;
+
+
+
+                            // 止まった時は1枚目に戻す
+
+                            currentFrame = 0;
+
+                            catImg.src = catFrames[currentFrame];
+
+                        }
+
+
+
+                        // 左端到達
+
+                        if (x <= -500) {
+
+                            x = -500;
+
+                            direction = 1;
+
+                            stopTriggered = false;
+
+                        }
+
+                    }
+
+
+
+                    else if (state === "pauseBeforeBalloon") {
+
+                        // 一旦止まる → 0.5秒待つ
+
+                        if (timestamp - stateStart >= 500) {
+
+                            showBalloon();
+
+                            state = "showingBalloon";
+
+                            stateStart = timestamp;
+
+                        }
+
+                    }
+
+
+
+                    else if (state === "showingBalloon") {
+
+                        updateBalloonPosition();
+
+
+
+                        // 3秒後に吹き出しを消して歩行再開
+
+                        if (timestamp - stateStart >= 3000) {
+
+                            hideBalloon();
+
+                            state = "walking";
+
+                            frameTimer = 0;
+
+                        }
+
+                    }
+
+
+
+                    updateCatTransform();
+
+
+
+                    // 吹き出し表示中は位置追従
+
+                    if (balloon.classList.contains("show")) {
+
+                        updateBalloonPosition();
+
+                    }
+
+
+
+                    requestAnimationFrame(animate);
+
+                }
+
+
+
+                // 初期状態
+
+                catImg.src = catFrames[0];
+
+                x = 0;
+
+                updateCatTransform();
+
+                hideBalloon();
+
+
+
+                requestAnimationFrame(animate);
+
+
+
+                // リサイズ時に座標の破綻を防ぐ
+
+                window.addEventListener("resize", () => {
+
+                    x = Math.min(x, getMaxX());
+
+                    updateCatTransform();
+
+
+
+                    if (balloon.classList.contains("show")) {
+
+                        updateBalloonPosition();
+
+                    }
+
+                });
+
+            });
+
+        </script>
+
+
+
+    </body>
+
+</html>

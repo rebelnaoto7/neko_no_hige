@@ -1,0 +1,332 @@
+﻿{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>新規登録｜ねこのひげ</title>
+
+        <link rel="stylesheet"
+              href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+        <style>
+            :root {
+                --green-1: #1b4235;
+                --green-2: #143228;
+                --orange: #E79B49;
+                --orange-dark: #d98a35;
+                --card: #ffffff;
+                --ink: #2b3a34;
+                --muted: #8a978f;
+                --line: #e3e8e4;
+            }
+
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            html, body {
+                height: 100%;
+            }
+
+            body {
+                font-family: "Meiryo UI", Meiryo, "Hiragino Kaku Gothic ProN", sans-serif;
+                background: radial-gradient(circle at 50% 25%, var(--green-1) 0%, var(--green-2) 100%);
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 24px;
+                overflow: hidden;
+                position: relative;
+            }
+
+            /* 背景の浮遊肉球（welcome と統一） */
+            .paws {
+                position: absolute;
+                inset: 0;
+                z-index: 0;
+                pointer-events: none;
+            }
+
+            .paw {
+                position: absolute;
+                font-size: 44px;
+                opacity: .05;
+                animation: floatPaw 9s ease-in-out infinite;
+            }
+
+                .paw:nth-child(1) {
+                    top: 9%;
+                    left: 11%;
+                    font-size: 54px;
+                    animation-delay: 0s;
+                }
+
+                .paw:nth-child(2) {
+                    top: 22%;
+                    right: 13%;
+                    animation-delay: 1.2s;
+                }
+
+                .paw:nth-child(3) {
+                    bottom: 16%;
+                    left: 13%;
+                    font-size: 62px;
+                    animation-delay: 2.1s;
+                }
+
+                .paw:nth-child(4) {
+                    bottom: 11%;
+                    right: 16%;
+                    font-size: 48px;
+                    animation-delay: .6s;
+                }
+
+            @keyframes floatPaw {
+                0%,100% {
+                    transform: translateY(0) rotate(-8deg);
+                }
+
+                50% {
+                    transform: translateY(-16px) rotate(6deg);
+                }
+            }
+
+            /* カード */
+            .card {
+                position: relative;
+                z-index: 2;
+                width: min(92vw,460px);
+                background: var(--card);
+                border-radius: 24px;
+                padding: 40px 36px 34px;
+                box-shadow: 0 24px 60px rgba(0,0,0,.35);
+                animation: rise .7s cubic-bezier(.2,.8,.2,1) both;
+            }
+
+            @keyframes rise {
+                from {
+                    opacity: 0;
+                    transform: translateY(26px);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            /* ねこロゴ（オレンジ円＋SVG・welcome と同一） */
+            .logo {
+                width: 84px;
+                height: 84px;
+                margin: -72px auto 16px;
+                background: var(--orange);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: none;
+                border: 5px solid var(--card);
+                animation: pop .8s .1s cubic-bezier(.2,1.4,.4,1) both;
+            }
+
+            @keyframes pop {
+                from {
+                    opacity: 0;
+                    transform: scale(.6);
+                }
+
+                to {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+
+            .logo img {
+                width: 90px;
+                height: 90px;
+                object-fit: contain;
+                position: relative;
+                left: 4px;
+            }
+
+            /* 見出し */
+            .brand {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
+                margin-bottom: 4px;
+            }
+
+
+
+            h1 {
+                font-size: 24px;
+                color: var(--green-1);
+                letter-spacing: .06em;
+                font-weight: 700;
+            }
+
+            .paw-icon {
+                color: #E79B49;
+                font-size: 18px;
+                position: relative;
+                top: -2px;
+                left: -2px;
+            }
+
+            .sub {
+                text-align: center;
+                color: var(--muted);
+                font-size: 13px;
+                margin-bottom: 24px;
+            }
+
+            /* form.as_p をそのまま整形 */
+            form p {
+                margin-bottom: 16px;
+            }
+
+            form label {
+                display: block;
+                font-size: 13px;
+                font-weight: 700;
+                color: var(--ink);
+                margin-bottom: 6px;
+            }
+
+            form input {
+                width: 100%;
+                padding: 13px 14px;
+                font-size: 15px;
+                border: 1.5px solid var(--line);
+                border-radius: 12px;
+                background: #fafbfa;
+                transition: border-color .15s, box-shadow .15s;
+                font-family: inherit;
+            }
+
+                form input:focus {
+                    outline: none;
+                    border-color: var(--orange);
+                    box-shadow: 0 0 0 3px rgba(231,155,73,.18);
+                    background: #fff;
+                }
+
+            /* ヘルプ文・補足を控えめに */
+            form .helptext, form ul.helptext {
+                display: block;
+                margin-top: 6px;
+                font-size: 11px;
+                color: var(--muted);
+                line-height: 1.6;
+                list-style: none;
+                padding: 0;
+            }
+
+                form .helptext li {
+                    list-style: none;
+                }
+
+            /* エラー表示 */
+            form .errorlist {
+                list-style: none;
+                margin: 6px 0 0;
+                padding: 0;
+                color: #c0392b;
+                font-size: 12px;
+            }
+
+            .btn-submit {
+                width: 100%;
+                padding: 15px;
+                margin-top: 6px;
+                border: none;
+                border-radius: 14px;
+                background: var(--orange);
+                color: #fff;
+                font-size: 16px;
+                font-weight: 700;
+                cursor: pointer;
+                font-family: inherit;
+                box-shadow: 0 8px 18px rgba(231,155,73,.4);
+                transition: transform .15s, background .15s, box-shadow .15s;
+            }
+
+                .btn-submit:hover {
+                    background: var(--orange-dark);
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 24px rgba(231,155,73,.5);
+                }
+
+                .btn-submit:focus-visible {
+                    outline: 3px solid #fff;
+                    outline-offset: 3px;
+                }
+
+            .alt {
+                text-align: center;
+                margin-top: 22px;
+                font-size: 13px;
+                color: var(--ink);
+            }
+
+                .alt a {
+                    color: var(--orange-dark);
+                    font-weight: 700;
+                    text-decoration: none;
+                    border-bottom: 1.5px solid transparent;
+                    transition: border-color .15s;
+                }
+
+                    .alt a:hover {
+                        border-bottom-color: var(--orange-dark);
+                    }
+
+            @media (prefers-reduced-motion:reduce) {
+                * {
+                    animation: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+
+        <div class="paws" aria-hidden="true">
+            <span class="paw">🐾</span><span class="paw">🐾</span><span class="paw">🐾</span><span class="paw">🐾</span>
+        </div>
+
+        <main class="card" role="main">
+            <div class="logo">
+                <img src="{% static 'tracker/img/cat_logo.png' %}" alt="ねこのひげロゴ">
+            </div>
+
+            <div class="brand">
+                <h1>
+                    新規登録
+                    <span class="paw-icon">
+                        <i class="fas fa-paw"></i>
+                    </span>
+                </h1>
+
+            </div>
+            <p class="sub">アカウントを作って、ねこのひげを使ってみようにゃ</p>
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn-submit">登録する</button>
+            </form>
+
+            <p class="alt">すでにアカウントをお持ちの方は <a href="{% url 'login' %}">ログイン</a></p>
+        </main>
+
+    </body>
+</html>
+

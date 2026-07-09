@@ -1,0 +1,359 @@
+﻿/* ============================================================
+   static/tracker/css/style.css
+   ねこのひげ - グローバルスタイルシート（初期版）
+
+   【役割】
+   base.html から <link rel="stylesheet"> で読み込まれる、
+   tracker アプリの共通スタイル定義ファイル。
+
+   【⚠️ 重要：このCSSは事実上ほとんど使われていない可能性が高い】
+   調査の結果：
+     - base.html は孤児ファイル（誰も継承していない）
+     - 各テンプレ（home/pain_create/pain_edit/pain_history/charts/reminder）は
+       スタンドアロンHTMLで、それぞれ <style> をテンプレ内に直書き
+     - つまり style.css の影響範囲は、孤児テンプレ（_placeholder.html等）のみ
+
+   【⚠️ さらに重要：パッチスクリプトの追記先になっている】
+   このファイルの末尾には、過去5本のPythonパッチスクリプトが
+   末尾追記を繰り返している（吹き出しアニメ、猫アイコン画像化など）。
+   そのため、このファイル全体は「ベース定義（このコメント以下）」と
+   「パッチ追記（末尾）」の2層構造になっている可能性が高い。
+
+   【整理方針の提案】
+   - 短期：このコメントは「定義の歴史メモ」として残し、現状動作を変えない
+   - 中期：パッチ追記分を整理してこのファイル本体にマージ
+   - 長期：base.html統合方針が決まったら、テンプレ独自CSSをここに集約
+
+   【ファイル内のセクション】
+     1. 基本リセット
+     2. ホーム画面（.home / .cat-icon / .logo / .menu）
+     3. 右下の猫＋吹き出し（.cat-corner / .speech-bubble）
+     4. 共通ヘッダー（.header / .header-nav）
+     5. ページ共通本体（.page-body）
+============================================================ */
+
+
+/* ============================================================
+   1. 基本リセット
+   ------------------------------------------------------------
+   ブラウザのデフォルトCSSのクセを吸収する定番ルール。
+   - margin/padding をゼロに統一
+   - box-sizing: border-box で padding/border を width に含める
+     → レイアウト計算が直感的になる
+============================================================ */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    /* Meiryo UI 優先（Windows）→ Hiragino Sans（Mac）→ 汎用sans-serif */
+    font-family: "Meiryo UI", "Hiragino Sans", sans-serif;
+    background: #2d4a3e; /* 深緑（ホーム画面の背景色） */
+    color: #fff;
+    min-height: 100vh; /* 画面高未満でも背景が埋まる */
+    overflow-x: hidden; /* 横スクロール防止 */
+}
+
+
+/* ============================================================
+   2. ホーム画面
+   ------------------------------------------------------------
+   ※ ただし、現在のホームは home.html がテンプレ内に
+     <style> を直書きしているため、ここの定義は実際には
+     ほぼ使われていない可能性が高い（要確認）
+============================================================ */
+
+/* ホーム画面の外枠コンテナ */
+.home {
+    position: relative;
+    min-height: 100vh;
+    padding: 40px 20px;
+    overflow: hidden;
+}
+
+    /* ホーム画面の背景装飾：肉球文字列を斜めに配置
+   ::before（左上）と ::after（右下）の2本の帯で
+   うっすら肉球の列を散らばらせる演出。
+   pointer-events:none でクリックを通過させる。
+   letter-spacing で肉球同士の間隔を確保。 */
+    .home::before,
+    .home::after {
+        content: "🐾  🐾  🐾  🐾  🐾  🐾  🐾  🐾  🐾  🐾";
+        position: absolute;
+        font-size: 28px;
+        opacity: 0.15; /* うっすら表示 */
+        pointer-events: none;
+        white-space: pre; /* 改行禁止＋空白維持 */
+        color: #a0c0a0;
+    }
+
+    /* 左上の肉球帯：-15度回転で「斜めに走る」演出 */
+    .home::before {
+        top: 5%;
+        left: -5%;
+        transform: rotate(-15deg);
+        letter-spacing: 80px;
+    }
+
+    /* 右下の肉球帯：逆向き20度回転で対称感を出す */
+    .home::after {
+        bottom: 5%;
+        right: -10%;
+        transform: rotate(20deg);
+        letter-spacing: 100px;
+    }
+
+/* 中央コンテンツコンテナ
+   z-index:2 で肉球背景（z-index 未指定=0）より前面に */
+.home-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+}
+
+/* ============================================================
+   猫アイコン（中央の円形枠）
+   ------------------------------------------------------------
+   元の設計：CSSで円形の橙色枠を作り、中に絵文字を表示
+   後にパッチスクリプトで <img> 化された経緯あり
+   そのためここの設定（background, border-radius など）は
+   末尾のパッチで上書きされている可能性が高い
+============================================================ */
+.cat-icon {
+    width: 140px;
+    height: 140px;
+    background: #d89060;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 72px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+
+/* ============================================================
+   ロゴ「ねこのひげ」
+   ------------------------------------------------------------
+   左右に「≷」記号でひげ風の装飾を付ける設計
+============================================================ */
+.logo {
+    font-size: 72px;
+    font-weight: bold;
+    letter-spacing: 8px;
+    margin-bottom: 16px;
+    position: relative;
+    display: inline-block;
+}
+
+    /* ロゴ左右の「ひげ」装飾（特殊文字 ≷ で代用） */
+    .logo::before,
+    .logo::after {
+        content: "≷";
+        color: #fff;
+        margin: 0 20px;
+        font-size: 48px;
+        opacity: 0.8;
+    }
+
+/* サブタイトル */
+.subtitle {
+    font-size: 18px;
+    color: #e0e0e0;
+    margin-bottom: 12px;
+}
+
+/* サブタイトル下の細い金色仕切り線 */
+.subtitle-divider {
+    width: 240px;
+    height: 2px;
+    background: #c0a070;
+    margin: 12px auto 40px;
+}
+
+/* ============================================================
+   メニュー（2列×Nのリンクグリッド）
+============================================================ */
+.menu {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 60px; /* 行間20px / 列間60px */
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: left;
+}
+
+/* メニュー1項目：金色＋下線（読み物的な誘導感） */
+.menu-item {
+    font-size: 22px;
+    color: #f0d878;
+    text-decoration: underline;
+    text-underline-offset: 4px; /* 下線とテキストの間隔 */
+}
+
+    .menu-item:hover {
+        color: #ffeb98; /* ホバーで明るく */
+    }
+
+    /* メニュー先頭の肉球マーカー
+   text-decoration:none で肉球には下線を付けない */
+    .menu-item::before {
+        content: "🐾";
+        margin-right: 10px;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+
+/* ============================================================
+   3. 右下の猫＋吹き出し
+   ------------------------------------------------------------
+   ホーム画面右下に「次のお薬時刻」を伝える猫を固定配置。
+   ※ 現行 home.html では <img> 化されていてここのCSSは効かない
+     可能性が高い（パッチで上書き済み）
+============================================================ */
+
+/* 猫＋吹き出し全体のコンテナ */
+.cat-corner {
+    position: fixed;
+    bottom: 0;
+    right: 30px;
+    z-index: 10;
+    animation: slideUp 1.2s ease-out;
+}
+
+/* 画面下から滑り上がってくるアニメーション */
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+    }
+
+    to {
+        transform: translateY(0);
+    }
+}
+
+/* 猫イラスト枠：元の設計はCSSで描く半円型の橙色枠 */
+.cat-corner-img {
+    width: 180px;
+    height: 180px;
+    background: #f5d8b8;
+    border-radius: 50% 50% 0 0; /* 上半分だけ丸める＝半円 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 90px;
+    box-shadow: 0 -4px 12px rgba(0,0,0,.2);
+}
+
+/* 吹き出し本体 */
+.speech-bubble {
+    position: absolute;
+    bottom: 150px;
+    right: 180px;
+    background: #b8d8d0;
+    color: #2d4a3e;
+    padding: 20px 24px;
+    border-radius: 20px;
+    font-size: 16px;
+    text-align: center;
+    min-width: 140px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+
+    /* 吹き出しのしっぽ（下向き三角）
+   border の太さで三角を作る古典テクニック */
+    .speech-bubble::after {
+        content: "";
+        position: absolute;
+        bottom: -10px;
+        right: 30px;
+        border: 12px solid transparent;
+        border-top-color: #b8d8d0;
+        border-bottom: 0;
+    }
+
+    /* 吹き出し内の時刻部分は大きく赤で強調 */
+    .speech-bubble .time {
+        font-size: 28px;
+        color: #d04a4a;
+        font-weight: bold;
+        display: block;
+        margin: 4px 0;
+    }
+
+
+/* ============================================================
+   4. 共通ヘッダー（他ページ用）
+   ------------------------------------------------------------
+   ※ ただし、各テンプレが独自にヘッダーCSSをテンプレ内に
+     書いているため、ここの定義は実際には使われていない可能性が高い
+============================================================ */
+
+/* ヘッダー本体：横並び＋深緑背景 */
+.header {
+    background: #2d4a3e;
+    padding: 16px 30px;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+
+/* ヘッダー左端のロゴ */
+.header-logo {
+    color: #fff;
+    font-size: 28px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-decoration: none;
+}
+
+    /* ヘッダーロゴ左右の「ひげ」装飾 */
+    .header-logo::before,
+    .header-logo::after {
+        content: "≷";
+        margin: 0 8px;
+        opacity: 0.7;
+    }
+
+/* ヘッダーのナビリンク */
+.header-nav a {
+    color: #f0d878;
+    text-decoration: underline;
+    margin-right: 30px;
+    font-size: 16px;
+}
+
+    /* 各リンクの先頭に肉球マーカー */
+    .header-nav a::before {
+        content: "🐾 ";
+    }
+
+
+/* ============================================================
+   5. ページ共通本体（他ページの白系背景部分）
+   ------------------------------------------------------------
+   ヘッダー（70px想定）を除いた残り全画面を占める領域。
+   ※ 現行はどのテンプレもこのクラスを使っていない可能性が高い
+============================================================ */
+.page-body {
+    background: #e8e4d8;
+    color: #333;
+    min-height: calc(100vh - 70px); /* ヘッダーぶん引いた高さ */
+    padding: 40px 20px;
+}
+
+/* ============================================================
+   ※ このコメント以下に、パッチスクリプトによる追記が
+     存在する可能性があります。
+   ※ 追記内容の例：
+     - 吹き出しの遅延フェードイン（add_speech_bubble_animation.py）
+     - 吹き出しを猫の頭上に配置（position_speech_bubble.py）
+     - 中央猫アイコンの画像化（replace_center_cat_icon.py）
+     - 右下猫の neko.png 化（replace_corner_cat_image.py）
+     - ホームレイアウト調整（adjust_home_layout.py）
+============================================================ */

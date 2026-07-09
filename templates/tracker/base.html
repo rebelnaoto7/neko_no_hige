@@ -1,0 +1,171 @@
+{% load static %}
+{# ============================================================ #}
+{# templates/tracker/base.html                                  #}
+{# ねこのひげ - 全画面共通の親テンプレート     どのページにも共通する部分（ヘッダー・フッター・CSSなど）を1つにまとめたもの   #}
+{# 提供ブロック: title / extra_head / body / scripts            #}
+{# ============================================================ #}
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ねこのひげ{% endblock %}</title>
+
+    <!-- フォント -->
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #1b4235;
+            --header: #244b3a;
+            --accent: #e79b49;
+            --text-sub: #d8ccb1;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: #fff;
+            font-family: "Meiryo UI", "Zen Maru Gothic", sans-serif;
+        }
+
+        /* =========================
+           ヘッダー（共通ナビ）
+        ========================= */
+
+        .header {
+            background: var(--header);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header-logo {
+            width: 36px;
+            height: 36px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 22px;
+        }
+
+            .nav a {
+                color: #fff;
+                text-decoration: none;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+                .nav a:hover {
+                    opacity: 0.8;
+                }
+
+        .paw-mini {
+            width: 16px;
+        }
+
+        /* =========================
+           メイン領域
+        ========================= */
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 30px 20px 80px;
+        }
+
+        /* =========================
+           戻るボタン（全ページ共通）
+        ========================= */
+
+        .back-button-wrapper {
+            text-align: center;
+            margin: 60px 0 40px;
+        }
+
+        .back-button {
+            padding: 14px 42px;
+            font-size: 18px;
+            border-radius: 999px;
+            border: none;
+            background: var(--accent);
+            color: #fff;
+            font-family: "Meiryo UI", sans-serif;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+            .back-button:hover {
+                opacity: 0.85;
+            }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+    <!-- =========================
+         ヘッダー（全ページ共通）
+    ========================= -->
+    <header class="header">
+
+        <a href="{{ url_home }}">
+            <img src="{% static 'tracker/img/cat_logo.png' %}" class="header-logo" alt="">
+        </a>
+
+        <nav class="nav">
+
+            <a href="{{ url_pain }}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="paw-mini" alt="">
+                痛みの記録
+            </a>
+
+            <a href="{{ url_charts }}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="paw-mini" alt="">
+                見える化
+            </a>
+
+            <a href="{{ url_reminder }}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="paw-mini" alt="">
+                リマインダー
+            </a>
+
+        </nav>
+    </header>
+
+    <!-- =========================
+         各ページの内容
+    ========================= -->
+    <main class="container">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- =========================
+         戻るボタン（全ページ共通）
+         ・デフォルトで表示
+         ・home.html だけ override で消す
+    ========================= -->
+    {% block back_button %}
+    <div class="back-button-wrapper">
+        <button class="back-button"
+                onclick="if (history.length > 1) { history.back(); } else { location.href='{{ url_home }}'; }">
+            戻る
+        </button>
+    </div>
+    {% endblock %}
+
+</body>
+</html>
+``

@@ -1,0 +1,778 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ねこのひげ ｜ 気圧×体調×服薬を、猫がそっと見守る</title>
+    <style>
+        :root {
+            --green-1: #1b4235;
+            --green-2: #143228;
+            --green-3: #235040;
+            --orange: #E79B49;
+            --orange-dark: #d98a35;
+            --cream: #f4efe6;
+            --ink: #2b3a34;
+            --muted: #7d8a82;
+            --soft: rgba(244, 239, 230, .78);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: "Meiryo UI", Meiryo, "Hiragino Kaku Gothic ProN", sans-serif;
+            color: var(--ink);
+            background: var(--cream);
+            line-height: 1.7;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a {
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .wrap {
+            width: min(92vw, 1080px);
+            margin: 0 auto;
+        }
+
+        /* ===== ヘッダー ===== */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: #1b4235;
+            border-bottom: 1px solid rgba(255, 255, 255, .08);
+        }
+        .nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            height: 64px;
+        }
+        header .wrap {
+            width: 98vw;
+            max-width: none;
+        }
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--cream);
+        }
+        .nav-logo {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-logo svg {
+            width: 20px;
+            height: 20px;
+            fill: #fff;
+        }
+        .nav-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 50%;
+        }
+        .nav-name { display: none; }
+        .nav-cta {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .nav-link {
+            color: var(--soft);
+            font-size: 14px;
+            transition: color .15s;
+        }
+        .nav-link:hover { color: var(--cream); }
+        .nav-btn {
+            padding: 9px 18px;
+            border-radius: 10px;
+            background: var(--orange);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            transition: background .15s, transform .15s;
+        }
+        .nav-btn:hover {
+            background: var(--orange-dark);
+            transform: translateY(-1px);
+        }
+
+        /* ===== ヒーロー ===== */
+        .hero {
+            position: relative;
+            overflow: hidden;
+            padding: 48px 0 70px;
+            background: #1b4235;
+            color: var(--cream);
+        }
+        .paw-bg {
+            position: absolute;
+            width: 70px;
+            opacity: 0.12;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .paw1 { top: 100px; left: 80px; transform: rotate(-15deg); }
+        .paw2 { top: 120px; right: 120px; transform: rotate(15deg); }
+        .paw3 { bottom: 220px; left: 50px; transform: rotate(-25deg); }
+        .paw4 { bottom: 180px; right: 80px; transform: rotate(20deg); }
+        .paw5 { bottom: 80px; left: 250px; transform: rotate(-10deg); }
+
+        @keyframes floatPaw {
+            0%, 100% { transform: translateY(0) rotate(-8deg); }
+            50% { transform: translateY(-18px) rotate(6deg); }
+        }
+
+        /* 中央寄せタイトルカード型ヒーロー */
+        .hero-grid {
+            position: relative;
+            top: -40px;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        .hero-grid > div {
+            width: 100%;
+            max-width: 600px;
+        }
+        .hero-logo {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            box-shadow: none;
+            animation: pop .9s .1s cubic-bezier(.2, 1.4, .4, 1) both;
+        }
+        @keyframes pop {
+            from { opacity: 0; transform: scale(.6); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .hero-logo svg {
+            width: 50px;
+            height: 50px;
+            fill: #fff;
+        }
+        .hero-logo img {
+            width: 145px;
+            height: 145px;
+            object-fit: contain;
+        }
+        .hero-brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 14px;
+        }
+        .whisker {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        .whisker span {
+            display: block;
+            width: 30px;
+            height: 3px;
+            border-radius: 3px;
+            background: var(--cream);
+            opacity: .85;
+            transform-origin: right center;
+        }
+        .whisker span:nth-child(1) { transform: rotate(-22deg); }
+        .whisker span:nth-child(3) { transform: rotate(22deg); }
+        .whisker-right span { transform-origin: left center; }
+        .whisker-right span:nth-child(1) { transform: rotate(22deg); }
+        .whisker-right span:nth-child(3) { transform: rotate(-22deg); }
+        .hero-title {
+            font-size: 54px;
+            font-weight: 400;
+            letter-spacing: .1em;
+            line-height: 1.1;
+        }
+        .hero-title-img {
+            width: min(95%, 600px);
+            height: auto;
+            object-fit: contain;
+        }
+        .hero-lead {
+            font-size: 19px;
+            color: #d8ccb1;
+            margin: 8px 0 14px;
+        }
+        .hero-sub {
+            max-width: 440px;
+            margin: 0 auto 32px;
+            font-size: 15px;
+            color: var(--soft);
+        }
+        .accent {
+            width: 120px;
+            height: 3px;
+            border-radius: 3px;
+            background: var(--orange);
+            margin: 18px auto 26px;
+        }
+        .hero-actions {
+            display: flex;
+            gap: 40px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .btn {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 28px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            transition: transform .15s, box-shadow .15s, background .15s;
+        }
+        .btn small {
+            margin-top: 2px;
+            font-size: 11px;
+            font-weight: 400;
+            opacity: .85;
+        }
+        .btn-primary {
+            background: var(--orange);
+            color: #fff;
+            box-shadow: none;
+        }
+        .btn-primary:hover {
+            background: var(--orange-dark);
+            transform: translateY(-2px);
+            box-shadow: none;
+        }
+        .btn-ghost {
+            background: transparent;
+            color: var(--cream);
+            border: 1.5px solid rgba(244, 239, 230, .5);
+        }
+        .btn-ghost:hover {
+            background: rgba(244, 239, 230, .1);
+            transform: translateY(-2px);
+            border-color: var(--cream);
+        }
+
+        /* ヒーロー右：リマインダー風モックカード（中央寄せ版では非表示） */
+        .mock { display: none; }
+        @keyframes rise {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .mock-card {
+            max-width: 340px;
+            margin-left: auto;
+            padding: 24px 26px;
+            border-radius: 20px;
+            background: #eef4ec;
+            color: var(--ink);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+        }
+        .mock-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        /* ===== セクション共通 ===== */
+        section { padding: 80px 0; }
+        .sec-head {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        .sec-tag {
+            display: inline-block;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--orange-dark);
+            letter-spacing: .1em;
+        }
+        .sec-title {
+            font-size: 32px;
+            color: var(--green-1);
+            font-weight: 700;
+            letter-spacing: .04em;
+        }
+        .sec-title .ac { color: var(--orange); }
+        .sec-desc {
+            margin-top: 12px;
+            font-size: 15px;
+            color: var(--muted);
+        }
+
+        /* ===== 共感（悩み） ===== */
+        .problems { background: #fff; }
+        .prob-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+        .prob {
+            position: relative;
+            top: -15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 26px 30px;
+            border-radius: 18px;
+            border: 1px solid #ece6da;
+            background: var(--cream);
+            text-align: center;
+            transition: transform .2s, box-shadow .2s;
+        }
+        .prob:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 30px rgba(0, 0, 0, .08);
+        }
+        .prob .ic { margin-bottom: 14px; }
+        .prob .ic img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            display: block;
+            margin: 0 auto;
+        }
+        .prob:first-child .ic img {
+            position: relative;
+            top: -10px;
+        }
+        .prob h3 {
+            margin-bottom: 8px;
+            font-size: 17px;
+            color: var(--green-1);
+        }
+        .prob p {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        /* ===== 機能3本柱 ===== */
+        .features {
+            background: linear-gradient(180deg, var(--cream) 0%, #eef0e8 100%);
+        }
+        .feat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 26px;
+        }
+        .feat {
+            padding: 34px 28px;
+            border-radius: 20px;
+            border-top: 4px solid var(--orange);
+            background: #fff;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .05);
+            transition: transform .2s, box-shadow .2s;
+        }
+        .feat:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, .1);
+        }
+        .feat-ic {
+            width: 80px;
+            height: 80px;
+            border-radius: 16px;
+            background: rgba(231, 155, 73, .15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 18px;
+        }
+        .feat-ic img {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            display: block;
+        }
+        .feat h3 {
+            margin-bottom: 10px;
+            font-size: 19px;
+            color: var(--green-1);
+        }
+        .feat p {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        /* ===== 3ステップ ===== */
+        .steps { background: #fff; }
+        .step-grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+        .step {
+            padding: 0 12px;
+            text-align: center;
+        }
+        .step-num {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: var(--green-1);
+            color: var(--cream);
+            font-size: 22px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 18px;
+            box-shadow: 0 8px 18px rgba(27, 66, 53, .3);
+        }
+        .step h3 {
+            margin-bottom: 8px;
+            font-size: 17px;
+            color: var(--green-1);
+        }
+        .step p {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        /* ===== 情緒（猫が見守る） ===== */
+        .care {
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle at 30% 30%, var(--green-3) 0%, var(--green-1) 60%);
+            color: var(--cream);
+            text-align: center;
+        }
+        .care-cat {
+            width: 170px;
+            height: auto;
+            display: block;
+            margin: 0 auto 5px;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, .25));
+        }
+        .care h2 {
+            margin-bottom: 16px;
+            font-size: 30px;
+            letter-spacing: .04em;
+        }
+        .care p {
+            max-width: 600px;
+            margin: 0 auto;
+            font-size: 16px;
+            color: var(--soft);
+        }
+
+        /* ===== 最終CTA ===== */
+        .cta {
+            background: var(--orange);
+            color: #fff;
+            text-align: center;
+        }
+        .cta h2 {
+            margin-bottom: 12px;
+            font-size: 30px;
+            letter-spacing: .04em;
+        }
+        .cta p {
+            margin-bottom: 30px;
+            font-size: 16px;
+            opacity: .95;
+        }
+        .cta-actions {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .cta .btn-primary {
+            background: #fff;
+            color: var(--orange-dark);
+            box-shadow: 0 8px 18px rgba(0, 0, 0, .2);
+        }
+        .cta .btn-primary:hover {
+            background: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 14px 28px rgba(0, 0, 0, .28);
+        }
+        .cta .btn-ghost {
+            border-color: rgba(255, 255, 255, .7);
+            color: #fff;
+        }
+        .cta .btn-ghost:hover {
+            background: rgba(255, 255, 255, .15);
+        }
+
+        /* ===== フッター ===== */
+        footer {
+            padding: 36px 0;
+            background: var(--green-2);
+            color: var(--soft);
+            text-align: center;
+            font-size: 13px;
+        }
+        .footer-logo {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+        footer .fb {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            color: var(--cream);
+        }
+        footer .fb svg {
+            width: 22px;
+            height: 22px;
+            fill: var(--orange);
+        }
+
+        /* ===== レスポンシブ ===== */
+        @media (max-width: 860px) {
+            .hero-grid {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .hero-brand { justify-content: center; }
+            .accent {
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .hero-actions { justify-content: center; }
+            .hero-sub {
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .mock-card { margin: 30px auto 0; }
+            .mock-cat { right: 20px; }
+            .prob-grid,
+            .feat-grid,
+            .step-grid { grid-template-columns: 1fr; }
+            .hero-title { font-size: 42px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * { animation: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ===== ヘッダー ===== -->
+    <header>
+        <div class="wrap nav">
+            <a class="nav-brand" href="#top">
+                <span class="nav-logo">
+                    <img src="{% static 'tracker/img/cat_logo.png' %}" alt="ねこのひげ">
+                </span>
+                <span class="nav-name">ねこのひげ</span>
+            </a>
+            <nav class="nav-cta">
+                <a class="nav-link" href="#features">特徴</a>
+                <a class="nav-link" href="#steps">使い方</a>
+                <a class="nav-btn" href="{% url 'login' %}">ログイン</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- ===== ヒーロー ===== -->
+    <div class="hero" id="top">
+        <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw1" alt="">
+        <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw2" alt="">
+        <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw3" alt="">
+        <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw4" alt="">
+        <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw5" alt="">
+
+        <div class="wrap hero-grid">
+            <div>
+                <div class="hero-logo">
+                    <img src="{% static 'tracker/img/cat_logo.png' %}" alt="ねこのひげ ロゴ">
+                </div>
+                <div class="hero-brand">
+                    <img class="hero-title-img" src="{% static 'tracker/img/title_logo.png' %}" alt="ねこのひげ">
+                </div>
+                <p class="hero-lead">気圧 × 体調 × 服薬リマインドアプリ</p>
+                <div class="accent"></div>
+                <p class="hero-sub">
+                    痛みの記録・気圧の変化・服薬リマインダーをひとつに。<br>
+                    毎日の体調を、猫がそっと見守ります。
+                </p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="{% url 'tracker:signup' %}">無料ではじめる<small>30秒でアカウント作成</small></a>
+                    <a class="btn btn-ghost" href="{% url 'login' %}">ログイン<small>アカウントをお持ちの方</small></a>
+                </div>
+
+                <div class="mock" aria-hidden="true">
+                    <div class="mock-card">
+                        <div class="mock-row">🔔 次のおくすりは</div>
+                        <div class="mock-time">15:00</div>
+                        <div class="mock-med">ブルフェン だにゃ！</div>
+                        <hr class="mock-divider">
+                        <div class="mock-weather">
+                            <span class="ic">🌤️</span>
+                            <p><b>きょうのお天気</b>今日は暑いにゃ。水分補給を忘れずにゃ。気温の変動が少なく、快適に過ごせる一日だにゃ。</p>
+                        </div>
+                        <div class="mock-chip">最高 27.3℃ / 最低 20.1℃ / 寒暖差 7.2℃</div>
+                    </div>
+                    <img src="{% static 'tracker/img/haru_icon.png' %}" class="care-cat" alt="はるちゃん">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 共感（悩み） ===== -->
+    <section class="problems">
+        <div class="wrap">
+            <div class="sec-head">
+                <span class="sec-tag">こんな経験ありませんか？</span>
+                <h2 class="sec-title">天気が崩れると、<span class="ac">なんだか不調</span></h2>
+            </div>
+            <div class="prob-grid">
+                <div class="prob">
+                    <div class="ic">
+                        <img src="{% static 'tracker/img/landinga.png' %}" alt="雨の前に頭が重い">
+                    </div>
+                    <h3>雨の前に頭が重い</h3>
+                    <p>気圧が下がる日に限って、痛みや不調が出る。でも記録していないから気のせいか分からない。</p>
+                </div>
+                <div class="prob">
+                    <div class="ic">
+                        <img src="{% static 'tracker/img/landingb.png' %}" alt="薬を飲み忘れる">
+                    </div>
+                    <h3>薬を飲み忘れる</h3>
+                    <p>決まった時間の服薬。忙しいとつい後回しにして、気づけば飲み忘れていることも。</p>
+                </div>
+                <div class="prob">
+                    <div class="ic">
+                        <img src="{% static 'tracker/img/landingc.png' %}" alt="傾向が見えない">
+                    </div>
+                    <h3>傾向が見えない</h3>
+                    <p>体調の波と天気の関係。なんとなく感じてはいても、データで確かめたことはない。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 機能3本柱 ===== -->
+    <section class="features" id="features">
+        <div class="wrap">
+            <div class="sec-head">
+                <span class="sec-tag">FEATURES</span>
+                <h2 class="sec-title"><span class="ac">ねこのひげ</span> ができること</h2>
+                <p class="sec-desc">記録するだけ。あとは猫におまかせにゃ。</p>
+            </div>
+            <div class="feat-grid">
+                <div class="feat">
+                    <div class="feat-ic">
+                        <img src="{% static 'tracker/img/landingd.png' %}" alt="痛みの記録">
+                    </div>
+                    <h3>痛みの記録</h3>
+                    <p>その日の痛みレベルと体の不調を、猫のアイコンでかんたん記録。元気な日はにっこり猫で1タップ完了。</p>
+                </div>
+                <div class="feat">
+                    <div class="feat-ic">
+                        <img src="{% static 'tracker/img/landinge.png' %}" alt="データの見える化">
+                    </div>
+                    <h3>データの見える化</h3>
+                    <p>痛みの推移と気圧をグラフで重ねて表示。「低気圧の日に不調が増える」傾向がひと目で分かります。</p>
+                </div>
+                <div class="feat">
+                    <div class="feat-ic">
+                        <img src="{% static 'tracker/img/landingf.png' %}" alt="服薬リマインダー">
+                    </div>
+                    <h3>服薬リマインダー</h3>
+                    <p>飲む時間を設定すれば、猫がそっとお知らせ。今日のお天気アドバイス付きで、体調管理をサポート。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 3ステップ ===== -->
+    <section class="steps" id="steps">
+        <div class="wrap">
+            <div class="sec-head">
+                <span class="sec-tag">HOW IT WORKS</span>
+                <h2 class="sec-title">はじめ方は<span class="ac">3ステップ</span></h2>
+            </div>
+            <div class="step-grid">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <h3>アカウント作成</h3>
+                    <p>ユーザー名とパスワードだけ。30秒で登録完了。あなた専用のデータが守られます。</p>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <h3>毎日かんたん記録</h3>
+                    <p>痛みレベルを猫アイコンでタップ。服薬の時間も設定しておきましょう。</p>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <h3>傾向を確認</h3>
+                    <p>グラフで体調と気圧の関係を把握。猫のリマインダーで飲み忘れも防げます。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== 情緒（猫が見守る） ===== -->
+    <section class="care">
+        <div class="wrap" style="position:relative;z-index:2;">
+            <img src="{% static 'tracker/img/haru_icon2.png' %}" class="care-cat" alt="はるちゃん">
+            <h2>がんばりすぎなくて、いい。</h2>
+            <p>体調管理は、続けることがいちばん難しい。だから「ねこのひげ」は、猫があなたの隣でそっと見守ります。記録は1タップ、声かけはやさしく。今日もあなたのペースで、ゆっくりいきましょうにゃ。</p>
+        </div>
+    </section>
+
+    <!-- ===== 最終CTA ===== -->
+    <section class="cta">
+        <div class="wrap">
+            <h2>今日から体調と仲良くなろう。</h2>
+            <p>登録は無料。あなたの毎日を、猫が見守ります。</p>
+            <div class="cta-actions">
+                <a class="btn btn-primary" href="{% url 'tracker:signup' %}">無料ではじめる</a>
+                <a class="btn btn-ghost" href="{% url 'login' %}">ログイン</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== フッター ===== -->
+    <footer>
+        <div class="wrap">
+            <div class="fb">
+                <img src="{% static 'tracker/img/cat_logo.png' %}" class="footer-logo" alt="ねこのひげ">
+                <span>ねこのひげ</span>
+            </div>
+            <p>気圧 × 体調 × 服薬リマインダー ／ あなたの体調をそっと見守るにゃ</p>
+            <p style="margin-top:8px;opacity:.6;">© 2026 ねこのひげ</p>
+        </div>
+    </footer>
+
+</body>
+</html>

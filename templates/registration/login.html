@@ -1,0 +1,125 @@
+﻿{# templates/registration/login.html #}
+{# Django標準 LoginView 用のログイン画面。パスは registration/login.html 固定 #}
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ログイン｜ねこのひげ</title>
+    <style>
+        body {
+            font-family: "Meiryo UI", sans-serif;
+            background: #1b4235; /* 深緑（ホーム同一）*/
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-card {
+            background: #fff;
+            color: #1B4235;
+            padding: 32px 28px;
+            border-radius: 20px; /* ようこそボックスと同じ */
+            box-shadow: 0 5px 20px rgba(0,0,0,.3);
+            width: 320px;
+            text-align: center; /* 添付に合わせ中央寄せ */
+        }
+
+            .login-card h1 {
+                font-size: 21px;
+                margin: 0 0 6px;
+                color: #1B4235;
+            }
+
+            .login-card .sub {
+                font-size: 14px;
+                color: #6E7D72;
+                margin-bottom: 20px;
+            }
+
+            .login-card label {
+                display: block;
+                text-align: left;
+                font-weight: 700;
+                font-size: 13px;
+                color: #1B4235;
+                margin-top: 8px;
+            }
+
+            .login-card input {
+                width: 100%;
+                padding: 9px;
+                margin: 6px 0 12px;
+                box-sizing: border-box;
+                border: 1px solid #cfd8d0;
+                border-radius: 10px;
+                background: #f3f6f2;
+            }
+
+        .login-btn {
+            width: 100%;
+            padding: 12px;
+            background: #E79B49; /* オレンジ（共通）*/
+            color: #fff;
+            border: none;
+            border-radius: 30px; /* 添付の丸ボタン */
+            cursor: pointer;
+            font-family: "Meiryo UI", sans-serif;
+            font-weight: 700;
+            margin-top: 6px;
+        }
+
+            .login-btn:hover {
+                background: #d97e35;
+            }
+
+        .error {
+            color: #c0392b;
+            font-size: 13px;
+        }
+
+        .login-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .login-logo {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;
+            position: relative;
+            left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <h1 class="login-title">
+            <img src="{% static 'tracker/img/cat_logo.png' %}"
+                 alt="ねこのひげロゴ"
+                 class="login-logo">
+            ねこのひげへようこそ！
+        </h1>
+
+        <p class="sub">ログインしますか？</p>
+
+        {# ログイン失敗時のエラー表示 #}
+        {% if form.errors %}
+        <p class="error">ユーザー名またはパスワードが違います。</p>
+        {% endif %}
+
+        {# method=post 必須、CSRFトークンも必須 #}
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="login-btn">ログイン</button>
+        </form>
+    </div>
+</body>
+</html>
+

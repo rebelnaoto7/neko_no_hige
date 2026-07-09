@@ -1,0 +1,277 @@
+﻿{% load static %}
+{# ============================================================ #}
+{# templates/tracker/pain_history.html                            #}
+{# ねこのひげ - 痛み記録の履歴一覧画面                              #}
+{#                                                              #}
+{# 【役割】                                                      #}
+{# ビュー pain_history から渡される rows（最新200件＋天気・気圧）  #}
+{# を表形式で表示する。各行から編集画面へ遷移できる。              #}
+{#                                                              #}
+{# 【データ構造（rows の1要素）】                                  #}
+{#   r.pk           : PainRecordの主キー（編集リンク用）           #}
+{#   r.recorded_at  : 記録日時（aware datetime）                   #}
+{#   r.weather      : 天気ラベル（晴／曇／雨 など）                 #}
+{#   r.pressure_hpa : 気圧（無い場合は None）                       #}
+{#   r.level_label  : 痛みのレベル表示名                            #}
+{#   r.pain_type    : 不調の種類                                    #}
+{#   r.memo         : 補足メモ                                     #}
+{# ============================================================ #}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>履歴 | ねこのひげ</title>
+
+    {# Zen Maru Gothic：丸ゴシック系の和文フォント（読み込み中はsans-serifにフォールバック） #}
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ============================================================ */
+        /* デザイントークン（カラーパレット）                              */
+        /* :root にCSS変数として定義。色を変える時はここ1箇所を変えるだけ。 */
+        /* ============================================================ */
+        :root {
+            --bg: #E0DBD0; /* ページ背景（和紙風ベージュ） */
+            --header: #33503F; /* ヘッダー背景（深緑） */
+            --header-ink: #F2E7CB; /* ヘッダー文字色（生成り） */
+            --card: #F2EDE2; /* カード背景（淡い生成り） */
+            --ink: #3E5C4D; /* 基本文字色 */
+            --ink-soft: #6E7D72; /* 補助文字色（空行メッセージ用） */
+            --orange: #E79B49; /* アクセント（戻るボタン） */
+            --line: #C9C4B8; /* 表の罫線色 */
+            --th: #C7E0EA; /* 表ヘッダー背景（淡い水色） */
+            --link: #2F6D8F; /* リンク色（編集リンク） */
+        }
+
+        /* box-sizing: border-box は padding/border を width に含める定番ルール */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            font-family: "Zen Maru Gothic","Meiryo UI",sans-serif;
+            color: var(--ink);
+        }
+
+        /* ============================================================ */
+        /* サイトヘッダー                                                */
+        /* ============================================================ */
+        .site-header {
+            background: var(--header);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+
+        .brand img {
+            height: 46px;
+            display: block;
+        }
+
+        /* グローバルナビ */
+        .site-nav {
+            display: flex;
+            gap: 28px;
+        }
+
+            .site-nav a {
+                color: var(--header-ink);
+                text-decoration: underline;
+                font-weight: 500;
+                font-size: 16px;
+            }
+                /* 各リンクの先頭に肉球絵文字を追加 */
+                .site-nav a::before {
+                    content: "🐾 ";
+                    margin-right: 4px;
+                }
+
+        /* ============================================================ */
+        /* メインコンテンツの幅                                          */
+        /* ============================================================ */
+        .wrap {
+            max-width: 1180px;
+            margin: 24px auto;
+            padding: 0 28px 48px;
+        }
+
+        .page-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 8px 0 16px;
+        }
+
+        /* ============================================================ */
+        /* 履歴カード（表を包む紙のような枠）                              */
+        /* ============================================================ */
+        .history-card {
+            background: var(--card);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 4px 14px rgba(0,0,0,.05);
+        }
+
+        /* ============================================================ */
+        /* 履歴テーブル                                                  */
+        /* ============================================================ */
+        table.history {
+            width: 100%;
+            border-collapse: collapse; /* セル間の隙間を無くす */
+            background: #FBF8F0;
+        }
+
+            table.history th,
+            table.history td {
+                border: 1px solid var(--line);
+                padding: 10px 8px;
+                text-align: center;
+                font-size: 14px;
+                vertical-align: middle;
+            }
+
+            table.history thead th {
+                background: var(--th);
+                font-weight: 500;
+                color: var(--ink);
+            }
+            /* 行の高さを揃えて視覚リズムを安定化 */
+            table.history tbody tr {
+                height: 42px;
+            }
+
+            /* メモ列だけは左寄せ（長文の可読性のため） */
+            table.history td.memo {
+                text-align: left;
+            }
+
+            /* 編集リンク：色とウェイトでリンクと分かるように、装飾は控えめ */
+            table.history td.action a {
+                color: var(--link);
+                text-decoration: none;
+                font-weight: 700;
+            }
+
+                table.history td.action a:hover {
+                    text-decoration: underline;
+                }
+
+        /* 0件時の行：淡い文字＋イタリックで「データなし」を伝える */
+        .empty-row td {
+            color: var(--ink-soft);
+            font-style: italic;
+        }
+
+        /* ============================================================ */
+        /* 下部アクション（戻るボタン）                                    */
+        /* ============================================================ */
+        .actions {
+            display: flex;
+            justify-content: center;
+            margin-top: 24px;
+        }
+
+        .back-btn {
+            background: var(--orange);
+            color: #FFF;
+            font-weight: 700;
+            font-size: 16px;
+            padding: 12px 48px;
+            border: none;
+            border-radius: 24px;
+            text-decoration: none;
+            letter-spacing: .05em;
+        }
+
+            .back-btn:hover {
+                filter: brightness(.95);
+            }
+    </style>
+</head>
+<body>
+
+    {# ============================================================ #}
+    {# サイトヘッダー（ロゴ + グローバルナビ）                         #}
+    {# ============================================================ #}
+    <header class="site-header">
+        {# ロゴクリックでホーム画面に戻る #}
+        <a href="{% url 'tracker:home' %}" class="brand">
+            <img src="{% static 'tracker/img/cat_logo.png' %}" alt="ねこのひげ">
+        </a>
+
+        {# グローバルナビゲーション（主要3画面への導線） #}
+        <nav class="site-nav">
+            <a href="{% url 'tracker:pain_create' %}">痛みの記録</a>
+            <a href="{% url 'tracker:charts' %}">見える化</a>
+            <a href="{% url 'tracker:weather_risk' %}">痛み予報</a>
+            <a href="{% url 'tracker:reminder' %}">リマインダー設定</a>
+        </nav>
+    </header>
+
+    {# ============================================================ #}
+    {# メインコンテンツ                                              #}
+    {# ============================================================ #}
+    <div class="wrap">
+        <h1 class="page-title">いままでの履歴</h1>
+
+        {# ---- 履歴カード（表を内包） ---- #}
+        <section class="history-card">
+            <table class="history">
+                {# テーブルヘッダー：列の意味を提示 #}
+                <thead>
+                    <tr>
+                        <th>日時</th>
+                        <th>天気</th>
+                        <th>気圧(hPa)</th>
+                        <th>痛みレベル</th>
+                        <th>不調の種類</th>
+                        <th>メモ</th>
+                        <th>編集</th>
+                    </tr>
+                </thead>
+
+                {# テーブル本体：rows をループして1件1行で描画 #}
+                <tbody>
+                    {% for r in rows %}
+                    <tr>
+                        {# 日時は "YYYY/MM/DD HH:MM" 形式で表示（秒は不要） #}
+                        <td>{{ r.recorded_at|date:"Y/m/d H:i" }}</td>
+
+                        <td>{{ r.weather }}</td>
+
+                        {# 気圧は欠損時に "—" を出して空白セルを避ける #}
+                        <td>{% if r.pressure_hpa %}{{ r.pressure_hpa }}{% else %}—{% endif %}</td>
+
+                        <td>{{ r.level_label }}</td>
+                        <td>{{ r.pain_type }}</td>
+
+                        {# メモは長文になりがちなのでCSSで左寄せ #}
+                        <td class="memo">{{ r.memo }}</td>
+
+                        {# 編集リンク：URL名 'tracker:pain_edit' に主キーを渡して該当レコードへ #}
+                        <td class="action">
+                            <a href="{% url 'tracker:pain_edit' r.pk %}">✏️編集</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    {# rows が空の時の表示（{% for %}{% empty %} はDjango標準構文） #}
+                    <tr class="empty-row"><td colspan="8">まだ記録がありません。</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        {# ---- 下部アクション ---- #}
+        {# ⚠️ 現状の遷移先は pain_create（入力画面）。                  #}
+        {#   「戻る」というラベルだとUX的に違和感あり。                 #}
+        {#   本来は home に戻すか、ラベルを「痛みを記録する」に変えるべき #}
+        <div class="actions">
+            <a href="{% url 'tracker:pain_create' %}" class="back-btn">戻る</a>
+        </div>
+    </div>
+
+</body>
+</html>

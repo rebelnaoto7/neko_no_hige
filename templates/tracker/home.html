@@ -1,0 +1,954 @@
+{% load static %}
+
+
+
+{% url 'tracker:pain_create' as url_pain %}
+
+{% url 'tracker:charts' as url_charts %}
+
+{% url 'tracker:reminder' as url_reminder %}
+{% url 'tracker:weather_risk' as url_risk %}
+
+
+
+<!DOCTYPE html>
+
+<html lang="ja">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ホーム | ねこのひげ</title>
+
+
+
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+
+
+
+    <style>
+
+        :root {
+            --bg: #1b4235;
+            --subtext: #d8ccb1;
+            --line: #e79b49;
+            --menu: #f2d870;
+            --bubble-bg: #DCE8D2;
+            --bubble-ink: #3E5C4D;
+            --bubble-sub: #6E7D72;
+            --bubble-orange: #E79B49;
+            --bubble-chip: #EFEAD8;
+        }
+
+
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            min-height: 100%;
+        }
+
+
+
+        body {
+            background: var(--bg);
+            color: #ffffff;
+            font-family: "Zen Maru Gothic", sans-serif;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .menu-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #E79B49;
+            color: white;
+            text-decoration: none;
+            border-radius: 30px;
+            font-size: 20px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+
+
+            .menu-btn:hover {
+                background: #F2D870;
+                color: #1B4235;
+                transform: translateY(-2px);
+            }
+
+
+
+        /* =========================
+
+           背景の肉球
+
+        ========================= */
+
+        .paw-bg {
+            position: fixed;
+            opacity: 0.16;
+            pointer-events: none;
+            user-select: none;
+            z-index: 0;
+        }
+
+
+
+        .paw1 {
+            width: 92px;
+            top: 70px;
+            left: 80px;
+        }
+
+
+
+        .paw2 {
+            width: 70px;
+            top: 110px;
+            right: 130px;
+        }
+
+
+
+        .paw3 {
+            width: 58px;
+            top: 390px;
+            left: 110px;
+        }
+
+
+
+        .paw4 {
+            width: 96px;
+            top: 450px;
+            right: 85px;
+        }
+
+
+
+        .paw5 {
+            width: 52px;
+            top: 690px;
+            left: 48%;
+        }
+
+
+
+        /* =========================
+
+           メイン
+
+        ========================= */
+
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 90px;
+            padding: 0 20px 60px;
+        }
+
+
+
+        .logo {
+            width: 180px;
+            height: auto;
+            display: block;
+            margin: 0 auto 22px;
+        }
+
+
+
+        .title-img {
+            width: 800px;
+            max-width: 88vw;
+            height: auto;
+            display: block;
+            margin: 0 auto 18px;
+        }
+
+
+
+        .subtitle {
+            color: var(--subtext);
+            font-size: 24px;
+            line-height: 1.6;
+            text-align: center;
+            margin: 0 0 22px;
+        }
+
+
+
+        .divider {
+            width: 320px;
+            max-width: 70vw;
+            height: 3px;
+            background: var(--line);
+            border-radius: 999px;
+            margin: 0 0 42px;
+        }
+
+
+
+        .menu {
+            width: 600px;
+            max-width: 92vw;
+        }
+
+
+
+            .menu a {
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                width: fit-content;
+                color: var(--menu);
+                text-decoration: underline;
+                text-underline-offset: 5px;
+                text-decoration-thickness: 2px;
+                font-size: 23px;
+                font-weight: 450;
+                line-height: 1.5;
+                margin: 18px 0;
+            }
+
+
+
+                .menu a:hover {
+                    opacity: 0.86;
+                }
+
+
+
+        .paw-icon {
+            width: 38px;
+            height: auto;
+            display: block;
+            flex-shrink: 0;
+        }
+
+
+
+        .item1 {
+            margin-left: -34px;
+        }
+
+
+
+        .item2 {
+            margin-left: 62px;
+        }
+
+
+
+        .item3 {
+            margin-left: -34px;
+        }
+
+
+
+        .item-risk {
+            margin-left: 62px;
+        }
+
+
+
+        /* ============================================================ */
+
+        /* リマインダー吹き出し ＋ 覗く猫（右下端に固定・登場アニメ付き） */
+
+        /* ・演出：①猫が下からスライドアップ → ②遅れて吹き出しが出現    */
+
+        /* ・animation-delay で順序を制御                                */
+
+        /* ・animation-fill-mode:both で開始前は非表示状態を保持         */
+
+        /* ・変数が未定義でも分岐で壊れずフォールバック表示              */
+
+        /* ※注意：CSS/HTMLコメント内にテンプレートタグ記号を書かない    */
+
+        /* ============================================================ */
+
+        .reminder-widget {
+            position: fixed;
+            right: 24px;
+            bottom: -10px;
+            z-index: 50;
+            width: 300px;
+            max-width: 80vw;
+            /* 子要素(猫・吹き出し)を縦に積む。猫が下、吹き出しが上。 */
+
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+
+
+        /* --- 吹き出し本体（後から登場） --- */
+
+        .rw-bubble {
+            position: relative;
+            order: 1; /* 表示順：上 */
+
+            width: 100%;
+            background: var(--bubble-bg);
+            color: var(--bubble-ink);
+            border-radius: 24px;
+            padding: 20px 20px 24px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.3);
+            /* 登場アニメ：猫より遅れてフェード＋せり上がり */
+
+            opacity: 0;
+            transform-origin: bottom center;
+            animation: bubbleIn 0.6s cubic-bezier(.22,1,.36,1) forwards;
+            animation-delay: 0.9s; /* 猫が出きった後に開始 */
+        }
+
+
+
+            /* 吹き出しのしっぽ（下向き・右寄り） */
+
+            .rw-bubble::after {
+                content: "";
+                position: absolute;
+                bottom: -16px;
+                left: 50%; /* ← 左から50%の位置に置き */
+
+                transform: translateX(-50%); /* ← 矢印の幅の半分だけ戻して正確に中央 */
+
+                border: 13px solid transparent;
+                border-top-color: var(--bubble-bg);
+                border-bottom: 0;
+            }
+
+        /* ===== 現在地フッター帯（猫の黒ラインを全幅に延長して馴染ませる）===== */
+
+        .geo-footer {
+            position: fixed; /* 画面下に固定 */
+
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 56px; /* 台座が確実に帯へ重なる高さ。角の緑を消すため少し高め */
+
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* 中央→左寄せ */
+
+            padding-left: 24px; /* 左端に少し余白 */
+
+            gap: 8px;
+            background: var(--bg); /* 背景と同じ緑。帯を背景に完全に溶け込ませる */
+
+            color: #cdd8d0;
+            font-family: "Meiryo UI", sans-serif;
+            font-size: 10px;
+            letter-spacing: 0.04em;
+            z-index: 40; /* 猫(50)より後ろに固定。これで猫の前足が常に帯の前面 */
+
+            box-shadow: none;
+            border-top: none; /* ← これを追加 or 既存を削除 */
+        }
+
+
+
+            .geo-footer .geo-pin {
+                font-size: 14px;
+            }
+
+
+
+        /* 服薬リマインド */
+
+        .rw-med {
+            text-align: center;
+        }
+
+
+
+        .rw-med-head {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+
+
+        .rw-time {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--bubble-orange);
+            line-height: 1.1;
+            letter-spacing: .02em;
+        }
+
+
+
+        .rw-med-foot {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+
+
+        /* 区切り点線 */
+
+        .rw-divider {
+            border: none;
+            border-top: 2px dashed #A9B8A0;
+            margin: 14px 0;
+        }
+
+
+
+        /* 天気アドバイス */
+
+        .rw-weather {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+
+
+        .rw-weather-icon {
+            font-size: 36px;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+
+
+        /* きょうのお天気アイコン：見える化ページの週間天気と同じライン風SVGを使用 */
+
+        .rw-weather-icon .wi-today {
+            width: 40px;
+            height: 40px;
+            display: block;
+        }
+
+
+
+        .rw-weather-text strong {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+
+
+
+        .rw-weather-text p {
+            margin: 0;
+            font-size: 13px;
+            line-height: 1.6;
+            color: var(--bubble-ink);
+        }
+
+
+
+        /* 気温チップ */
+
+        .rw-temp {
+            margin-top: 14px;
+            background: var(--bubble-chip);
+            border-radius: 12px;
+            padding: 7px 10px;
+            font-size: 12px;
+            color: var(--bubble-ink); /* #3E5C4D：AA合格(6.13:1)で視認性UP */
+
+            text-align: center;
+        }
+
+
+
+        /* --- 覗く猫（先に登場・少し大きめ） --- */
+
+        .rw-cat {
+            order: 2; /* 表示順：下 */
+
+            display: block;
+            width: 340px; /* 少し大きめ */
+
+            height: auto;
+            margin: -8px auto 0; /* 吹き出しに少し食い込む */
+
+            position: relative;
+            z-index: -1; /* 吹き出しの背面 */
+            /* 登場アニメ：画面下からスライドアップ */
+
+            transform: translateY(100%);
+            opacity: 0;
+            animation: catRise 0.8s cubic-bezier(.22,1,.36,1) forwards;
+            animation-delay: 0.2s; /* ページ表示直後に登場 */
+        }
+
+
+
+        /* 猫：下からせり上がる */
+
+        @keyframes catRise {
+
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+
+
+        /* 吹き出し：下からフェードしつつ少しせり上がる */
+
+        @keyframes bubbleIn {
+
+            from {
+                opacity: 0;
+                transform: translateY(24px) scale(0.96);
+            }
+
+
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+
+
+        /* スマホでは少し小さく＋右余白を詰める */
+
+        @media (max-width: 768px) {
+
+            .reminder-widget {
+                right: 10px;
+                width: 240px;
+            }
+
+
+
+            .rw-time {
+                font-size: 40px;
+            }
+
+
+
+            .rw-cat {
+                width: 240px;
+            }
+        }
+
+
+
+        /* ログアウトボタン（Meiryo UI 統一・オレンジ猫テイスト） */
+
+        .logout-form {
+            margin: 0;
+        }
+
+
+
+        .logout-btn {
+            padding: 6px 14px;
+            font-size: 13px;
+            font-family: "Meiryo UI", sans-serif;
+            color: #fff;
+            background: #E8964F;
+            border: none;
+            border-radius: 16px;
+            cursor: pointer;
+        }
+
+
+
+            .logout-btn:hover {
+                background: #d97e35;
+            }
+
+        /* ポップアップ背景 */
+
+        .welcome-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+
+
+        /* ボックス */
+
+        .welcome-box {
+            background: white;
+            color: #1B4235;
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 350px;
+            box-shadow: 0 5px 20px rgba(0,0,0,.3);
+        }
+
+
+
+        .welcome-buttons {
+            margin-top: 20px;
+        }
+
+
+
+        /* ログイン */
+
+        .login-btn {
+            background: #E79B49;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            margin-right: 10px;
+        }
+
+
+
+        /* 閉じる */
+
+        .close-btn {
+            background: #ccc;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+        }
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <!-- 背景肉球 -->
+
+    <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw1" alt="">
+
+    <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw2" alt="">
+
+    <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw3" alt="">
+
+    <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw4" alt="">
+
+    <img src="{% static 'tracker/img/paw_bg.png' %}" class="paw-bg paw5" alt="">
+
+
+
+    <main class="container">
+
+
+
+        <!-- ロゴ -->
+
+        <img src="{% static 'tracker/img/cat_logo.png' %}" class="logo" alt="ロゴ">
+
+
+
+        <!-- タイトル -->
+
+        <img src="{% static 'tracker/img/title_logo.png' %}" class="title-img" alt="ねこのひげ">
+
+
+
+        <!-- サブタイトル -->
+
+        <p class="subtitle">気圧×体調×服薬リマインドアプリ</p>
+
+
+
+        <!-- 区切り線 -->
+
+        <div class="divider"></div>
+
+
+
+        <!-- メニュー -->
+
+        <nav class="menu">
+
+            <a href="{{ url_pain }}" class="item1">
+
+                <img src="{% static 'tracker/img/paw.png' %}" class="paw-icon" alt="">
+
+                <span>痛みの記録</span>
+
+            </a>
+
+
+
+            <a href="{{ url_charts }}" class="item2">
+
+                <img src="{% static 'tracker/img/paw.png' %}" class="paw-icon" alt="">
+
+                <span>データの見える化</span>
+
+            </a>
+
+
+
+            <a href="{{ url_risk }}" class="item-risk">
+
+                <img src="{% static 'tracker/img/paw.png' %}" class="paw-icon" alt="">
+
+                <span>痛み予報</span>
+
+            </a>
+
+
+
+            <a href="{{ url_reminder }}" class="item3">
+
+                <img src="{% static 'tracker/img/paw.png' %}" class="paw-icon" alt="">
+
+                <span>服薬リマインダー設定</span>
+
+            </a>
+
+
+            {# ▼ ログアウトボタン（左下・Django5.xはPOST必須） #}
+
+            <div class="geo-footer">
+                {% if user.is_authenticated %}
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">ログアウト</button>
+                </form>
+                {% endif %}
+
+            </div>
+
+        </nav>
+
+
+
+    </main>
+
+
+
+    {# ============================================================ #}
+
+    {# リマインダー吹き出し＋覗く猫（右下端に固定／登場アニメ付き） #}
+
+    {# 演出：猫が先に下から登場 → 遅れて吹き出しが出現             #}
+
+    {# ------------------------------------------------------------ #}
+
+    {# 【重要】views.home が渡す実際の context 名に合わせて修正済み  #}
+
+    {#   next_reminder : dict or None（get_next_reminder の戻り値）  #}
+
+    {#       .label          : 次回服薬時刻の文字列 "HH:MM"          #}
+
+    {#       .medicine_name  : 薬の名前                             #}
+
+    {#   advice : dict（build_temperature_advice の戻り値）          #}
+
+    {#       .advice   : 猫の最終セリフ（None ならデータ無し）       #}
+
+    {#       .temp_max : 最高気温(℃)                                #}
+
+    {#       .temp_min : 最低気温(℃)                                #}
+
+    {#       .diff     : 寒暖差(℃)                                  #}
+
+    {#       .reason   : データが無いときの説明文                   #}
+
+    {# ============================================================ #}
+
+    {% if user.is_authenticated %}
+
+    <section class="reminder-widget">
+
+        <div class="rw-bubble">
+
+
+
+            {# 服薬リマインド：next_reminder.label を表示。無ければ --:-- #}
+
+            <div class="rw-med">
+
+                <div class="rw-med-head">🔔 次のおくすりは</div>
+
+                <div class="rw-time">{% if next_reminder %}{{ next_reminder.label }}{% else %}--:--{% endif %}</div>
+
+                <div class="rw-med-foot">
+
+                    {% if next_reminder %}
+
+                    {{ next_reminder.medicine_name }}{% if next_reminder.is_tomorrow %}{% endif %} だにゃ！
+
+                    {% else %}
+
+                    まだ無いにゃ
+
+                    {% endif %}
+
+                </div>
+
+            </div>
+
+
+
+            <hr class="rw-divider">
+
+
+
+            {# 天気アドバイス：advice.advice があれば本文、無ければ reason を表示 #}
+
+            <div class="rw-weather">
+
+                {# 天気アイコン：見える化ページの週間天気と同じ4種SVGを today_weather_code で出し分け。 #}
+                {# 絵文字⛅の固定表示をやめ、週間天気の“今日”のアイコンと必ず一致させる。          #}
+                {#   0=晴 / 1=晴のち曇 / 2=曇 / それ以外(3)=雨。charts.html と同一パスを使用。        #}
+                <div class="rw-weather-icon">
+                    {% if today_weather_code == 0 %}
+                    <svg viewBox="0 0 48 48" class="wi-today"><circle cx="24" cy="24" r="9" fill="#F2C14E" stroke="#E79B49" stroke-width="2" /><g stroke="#E79B49" stroke-width="2" stroke-linecap="round"><line x1="24" y1="4" x2="24" y2="11" /><line x1="24" y1="37" x2="24" y2="44" /><line x1="4" y1="24" x2="11" y2="24" /><line x1="37" y1="24" x2="44" y2="24" /><line x1="10" y1="10" x2="15" y2="15" /><line x1="33" y1="33" x2="38" y2="38" /><line x1="38" y1="10" x2="33" y2="15" /><line x1="15" y1="33" x2="10" y2="38" /></g></svg>
+                    {% elif today_weather_code == 1 %}
+                    <svg viewBox="0 0 48 48" class="wi-today"><circle cx="17" cy="16" r="7" fill="#F2C14E" stroke="#E79B49" stroke-width="2" /><g stroke="#E79B49" stroke-width="1.8" stroke-linecap="round"><line x1="17" y1="3" x2="17" y2="7" /><line x1="3" y1="16" x2="7" y2="16" /><line x1="7" y1="6" x2="10" y2="9" /></g><path d="M13 35 a8 8 0 0 1 8-8 a9 9 0 0 1 18 2 a6 6 0 0 1 -1 12 H15 a6 6 0 0 1 -2 -6 z" fill="#FBFAF6" stroke="#7A8A7E" stroke-width="2" /></svg>
+                    {% elif today_weather_code == 2 %}
+                    <svg viewBox="0 0 48 48" class="wi-today"><path d="M11 34 a8 8 0 0 1 8-8 a10 10 0 0 1 20 2 a6 6 0 0 1 -1 12 H13 a6 6 0 0 1 -2 -6 z" fill="#FBFAF6" stroke="#7A8A7E" stroke-width="2" /></svg>
+                    {% else %}
+                    <svg viewBox="0 0 48 48" class="wi-today"><path d="M24 8 C14 8 7 16 6 24 H42 C41 16 34 8 24 8 Z" fill="#CFE3D2" stroke="#5E7A66" stroke-width="2" /><line x1="24" y1="24" x2="24" y2="38" stroke="#5E7A66" stroke-width="2" stroke-linecap="round" /><path d="M24 38 a4 4 0 0 0 8 0" fill="none" stroke="#5E7A66" stroke-width="2" stroke-linecap="round" /></svg>
+                    {% endif %}
+                </div>
+
+                <div class="rw-weather-text">
+
+                    <strong>きょうのお天気</strong>
+
+                    <p>{% if advice.advice %}{{ advice.advice|linebreaksbr }}{% else %}{{ advice.reason }}{% endif %}</p>
+
+                </div>
+
+            </div>
+
+
+
+            {# 気温チップ：気温取得成功時のみ数値を表示。失敗時は — でフォールバック #}
+
+            <div class="rw-temp">
+
+                {% if advice.advice %}
+
+                最高 {{ advice.temp_max }}℃ / 最低 {{ advice.temp_min }}℃ / 寒暖差 {{ advice.diff }}℃
+
+                {% else %}
+
+                最高 —℃ / 最低 —℃ / 寒暖差 —℃
+
+                {% endif %}
+
+            </div>
+
+
+
+        </div>
+
+
+
+        {# 覗く猫。専用画像が無い場合は neko_walk.png にフォールバック #}
+
+        <img class="rw-cat"
+             src="{% static 'tracker/img/neko_peek.png' %}"
+             onerror="this.onerror=null; this.src='{% static 'tracker/img/neko_walk.png' %}';"
+             alt="覗く猫">
+
+    </section>
+
+    {% endif %}
+
+
+
+    <!-- ログイン案内ポップアップ -->
+    {% if not user.is_authenticated %}
+    <div id="loginModal" class="welcome-modal">
+
+
+        <div class="welcome-box">
+
+            <h2> ねこのひげへようこそ！</h2>
+
+            <p>ログインしますか？</p>
+
+
+
+            <div class="welcome-buttons">
+
+                <a href="{% url 'login' %}" class="login-btn">
+
+                    ログイン
+
+                </a>
+
+
+
+                <button onclick="closeModal()" class="close-btn">
+
+                    閉じる
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+    {% endif %}
+
+    <script>
+
+        function closeModal() {
+
+            document.getElementById("loginModal").style.display = "none";
+
+        }
+
+    </script>
+
+    <!-- ログインボタン -->
+    {% if not user.is_authenticated %}
+    <a href="{% url 'login' %}" class="menu-btn">
+        🔐 ログイン
+    </a>
+    {% endif %}
+
+    </div>
+
+
+
+</body>
+
+</html>

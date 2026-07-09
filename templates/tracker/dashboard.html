@@ -1,0 +1,224 @@
+﻿{% extends "tracker/base.html" %}
+{# ============================================================ #}
+{# templates/tracker/charts.html （旧版・要確認）                 #}
+{# ねこのひげ - 痛み×気圧ダッシュボード画面                        #}
+{#                                                              #}
+{# 【役割】                                                      #}
+{# 1ページに以下を集約したダッシュボード：                          #}
+{#   - 現在の気圧（東京）                                          #}
+{#   - 痛み×気圧の時系列グラフ（直近30日）                         #}
+{#   - 痛み・服薬の入力フォーム（ModelForm経由）                   #}
+{#   - 最近の痛み・服薬記録の一覧                                 #}
+{#                                                              #}
+{# 【⚠️ このファイルは現行運用と整合していない可能性】              #}
+{# - charts ビューは現在 `week`（7日分集計）を渡している           #}
+{# - このテンプレが要求しているのは latest_pains / latest_meds /  #}
+{#   pain_form / med_form / current_pressure / pain_data / ...    #}
+{# - つまり別のビュー実装 or 初期版の名残の可能性が高い            #}
+{#                                                              #}
+{# 【ビューが渡すべき context（このテンプレを使う場合）】           #}
+{#   current_pressure : 現在気圧（None可）                         #}
+{#   pain_form        : ModelForm（PainRecordForm）                #}
+{#   med_form         : ModelForm（MedicationRecordForm）          #}
+{#   latest_pains     : 最近の痛み記録クエリセット                  #}
+{#   latest_meds      : 最近の服薬記録クエリセット                  #}
+{#   pain_data        : [{x: "...", y: 数値}, ...]                 #}
+{#   pressure_data    : [{x: "...", y: 数値}, ...]                 #}
+{# ============================================================ #}
+{% block content %}
+
+{# ============================================================ #}
+{# ブロック1：現在の気圧                                          #}
+{# ============================================================ #}
+<div class="card">
+    <h2>📊 現在の気圧（東京）</h2>
+    {# current_pressure が None なら "取得できませんでした" を表示 #}
+    {% if current_pressure %}
+    <p class="pressure-now">{{ current_pressure }} hPa</p>
+    {% else %}
+    <p>取得できませんでした</p>
+    {% endif %}
+</div>
+
+{# ============================================================ #}
+{# ブロック2：時系列グラフ（Chart.js）                            #}
+{# - <canvas>
+    をChart.jsが描画ターゲットとして使う                #}
+    {# - データは下部の {% block scripts %} 内で json_script から注入  #}
+    {# - height="120" はキャンバスの初期高さ（CSSで上書き可）          #}
+    {# ============================================================ #}
+    <div class="card">
+        <h2>📈 痛み × 気圧（直近30日）</h2>
+        <canvas id="chart" height="120"></canvas>
+    </div>
+
+    {# ============================================================ #}
+    {# ブロック3：2カラムの入力フォーム（痛み / 服薬）                  #}
+    {# ------------------------------------------------------------ #}
+    {# - {{ form.as_p }} は ModelForm を各<p>
+        に展開するDjango標準ヘルパ #}
+        {# - 1ページで2つのフォームを扱うため、submit ボタンに name 属性を #}
+        {#   付けてビュー側で「どちらが押されたか」を判別する設計           #}
+        {# ============================================================ #}
+        <div class="grid">
+
+            {# --- 痛み記録フォーム --- #}
+            <div class="card">
+                <h2>✏️ 痛みを記録</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    {# PainRecordForm（forms.py 参照）を <p>
+                        タグで自動展開 #}
+                        {{ pain_form.as_p }}
+                        {# submit_pain という name でビュー側が痛みフォーム送信と認識 #}
+                        <button type="submit" name="submit_pain">保存</button>
+                </form>
+            </div>
+
+            {# --- 服薬記録フォーム --- #}
+            <div class="card">
+                <h2>💊 服薬を記録</h2>
+                <form method="post">
+                    {% csrf_token %}
+                    {{ med_form.as_p }}
+                    <button type="submit" name="submit_med">保存</button>
+                </form>
+            </div>
+
+        </div>
+
+        {# ============================================================ #}
+        {# ブロック4：最近の記録（痛み / 服薬）                            #}
+        {# - {% empty %} で 0 件時にメッセージ行を出す                     #}
+        {# - get_body_part_display は choices に紐づく「表示用ラベル」を返す #}
+        {#   ※ ただし現行 PainRecord は body_part の choices が外されている #}
+        {#     ため、表示は空文字 or 生値になる可能性が高い（要確認）       #}
+        {# ============================================================ #}
+        <div class="grid">
+
+            {# --- 痛み記録テーブル --- #}
+            <div class="card">
+                <h2>🕘 最近の痛み記録</h2>
+                <table>
+                    <tr><th>日時</th><th>部位</th><th>痛み度</th></tr>
+                    {% for p in latest_pains %}
+                    <tr>
+                        <td>{{ p.recorded_at|date:"m/d H:i" }}</td>
+                        <td>{{ p.get_body_part_display }}</td>
+                        <td>{{ p.level }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3">記録なし</td></tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+            {# --- 服薬記録テーブル --- #}
+            <div class="card">
+                <h2>💊 最近の服薬記録</h2>
+                <table>
+                    <tr><th>日時</th><th>薬名</th></tr>
+                    {% for m in latest_meds %}
+                    <tr>
+                        <td>{{ m.taken_at|date:"m/d H:i" }}</td>
+                        <td>{{ m.name }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2">記録なし</td></tr>
+                    {% endfor %}
+                </table>
+            </div>
+
+        </div>
+
+        {% endblock %}
+
+
+        {# ============================================================ #}
+        {# 追加スクリプトブロック                                          #}
+        {# - base.html 側で {% block scripts %} 用の差し込み口がある前提   #}
+        {# - Chart.js 本体の読み込みも base.html 側に置かれている想定      #}
+        {# ============================================================ #}
+        {% block scripts %}
+
+        {# ============================================================ #}
+        {# json_script フィルタの使い方                                   #}
+        {# - サーバ側で渡したPythonオブジェクトをXSS安全に                  #}
+        {#
+        <script type="application/json" id="...">...</script> として出力 #}
+        {# - 後段の JavaScript で textContent → JSON.parse で復元できる    #}
+        {# ============================================================ #}
+        {{ pain_data|json_script:"pain-data" }}
+        {{ pressure_data|json_script:"pressure-data" }}
+
+        <script>
+            // ============================================================
+            // Chart.js による2軸グラフ描画
+            // ============================================================
+            // - 左Y軸（y_pressure）：気圧の折れ線
+            // - 右Y軸（y_pain）   ：痛み度の散布図（0〜10スケール）
+            // - X軸               ：時系列（day粒度）
+            //
+            // json_script で埋め込んだデータを取り出してパースしてから渡す。
+            // pain/pressureともに [{x: "ISO日時", y: 数値}, ...] の形式想定。
+
+            // ---- データ読み込み ----
+            const painData = JSON.parse(document.getElementById("pain-data").textContent);
+            const pressureData = JSON.parse(document.getElementById("pressure-data").textContent);
+
+            // ---- グラフ生成 ----
+            new Chart(document.getElementById("chart"), {
+                data: {
+                    datasets: [
+                        // 気圧：青系の折れ線（pointRadius:0で点を非表示にしてラインのみ強調）
+                        {
+                            type: "line",
+                            label: "気圧 (hPa)",
+                            data: pressureData,
+                            yAxisID: "y_pressure",
+                            borderColor: "#4a7aa0",
+                            backgroundColor: "rgba(74,122,160,.1)",
+                            tension: 0.3,         // 線の滑らかさ（0=直線、1=最大カーブ）
+                            pointRadius: 0,
+                        },
+                        // 痛み度：赤系の散布図（離散イベントを点で表現）
+                        {
+                            type: "scatter",
+                            label: "痛み度",
+                            data: painData,
+                            yAxisID: "y_pain",
+                            backgroundColor: "#d04a4a",
+                            pointRadius: 5,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,    // 親要素幅にフィット
+                    scales: {
+                        // X軸：時系列（日単位の目盛り）
+                        // ※ "time" を使うには Chart.js の time adapter が必要
+                        //   （chartjs-adapter-date-fns 等の読み込みが base.html 側に必要）
+                        x: { type: "time", time: { unit: "day" } },
+
+                        // 左Y軸：気圧
+                        y_pressure: {
+                            type: "linear",
+                            position: "left",
+                            title: { display: true, text: "気圧 (hPa)" }
+                        },
+
+                        // 右Y軸：痛み度（0〜10 で固定スケール）
+                        y_pain: {
+                            type: "linear",
+                            position: "right",
+                            min: 0,
+                            max: 10,
+                            title: { display: true, text: "痛み度" },
+                            // 右軸のグリッド線を消す（左軸と二重に出るのを防ぐ）
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        </script>
+        {% endblock %}

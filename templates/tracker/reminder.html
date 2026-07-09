@@ -1,0 +1,654 @@
+{% load static %}
+{# ============================================================ #}
+{# templates/tracker/reminder.html                              #}
+{# ねこのひげ - 服薬リマインダー設定画面                         #}
+{#                                                              #}
+{# 【2026-06-22 改修 / 谷藤】レイアウト調整                       #}
+{#  ・タイトル、登録領域、リマインダー領域のレイアウトを調整      #}
+{#  ・リンクボタン、フォントの大きさを変更                        #}
+{#  ・画面右側に猫と吹き出しの画像を追加                          #}
+{#                                                              #}
+{# 【2026-06-19 改修】カプセル画像化                             #}
+{#  ・薬アイコンを絵文字💊から画像 capsule.png に差し替え         #}
+{#    （登録フォーム＋一覧カードの2箇所）                         #}
+{#  ・.pill-icon を font-size 指定から width 指定（画像用）に変更 #}
+{#  ・画像が無い場合は元の💊絵文字に onerror フォールバック       #}
+{#                                                              #}
+{# 【2026-06-18 改修】C案：プリセットボタン＋時刻微調整           #}
+{#  ・登録フォームの時刻入力に「よく使う時刻」ボタンを追加        #}
+{#    朝8:00 / 昼12:00 / 夕18:00 / 夜20:00 をワンタップで反映     #}
+{#  ・±5分／±1時間の微調整ボタン（24時間ループ）                #}
+{#  ・time-input の値と一致するプリセットをオレンジ強調           #}
+{#  ・送信値は従来と同じ reminder_time(HH:MM)＝views 修正不要     #}
+{#                                                              #}
+{# 【2026-06-17 改修（継承）】                                   #}
+{#  ・戻るボタン（B方式）／form-area(中央1列)／list-area(2列)     #}
+{#  ・ヘッダーを charts と統一（paw.png + pill + active強調）     #}
+{# ============================================================ #}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服薬リマインダー設定 | ねこのひげ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #E0DBD0;
+            --page-bg: #E7E3DA;   /* html/body 地色（白帯防止） */
+            --header: #33503F;
+            --header-ink: #F2E7CB;
+            --ink: #3E5C4D;
+            --ink-soft: #6E7D72;
+            --orange: #E79B49;
+            --time-bg: #FFFFFF;
+            --note: #FBF6D7;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* html/body をまとめて定義（白帯防止＋地色統一） */
+        html, body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            font-family: "Zen Maru Gothic", "Meiryo UI", sans-serif;
+            color: var(--ink);
+        }
+
+        /* ============================================================ */
+        /* サイトヘッダー                                                */
+        /* ============================================================ */
+        /* ===== 共通ナビバー（他ページと統一） ===== */
+        .site-header {
+            display: flex;
+            align-items: center;
+            gap: 28px;
+            background: var(--header);
+            padding: 12px 28px;
+            border-radius: 0;
+            margin: 0 0 24px;
+        }
+
+            .site-header .brand {
+                display: flex;
+                align-items: center;
+                text-decoration: none;
+            }
+
+            .site-header .brand img {
+                height: 46px;
+                display: block;
+            }
+
+
+        /* ============================================================ */
+        /* ナビメニュー（charts と統一）                                 */
+        /* ============================================================ */
+        .site-nav {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+            .site-nav a {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: var(--header-ink);
+                text-decoration: none;
+                font-weight: 500;
+                font-size: 15px;
+                padding: 8px 16px;
+                border-radius: 999px;
+                transition: background 0.2s, color 0.2s;
+            }
+
+            .site-nav a .nav-paw {
+                width: 16px;
+                height: 16px;
+                opacity: 0.85;
+            }
+
+                .site-nav a:hover {
+                    background: rgba(255,255,255,0.12);
+                }
+
+            .site-nav a.active {
+                background: var(--orange);
+                color: #fff;
+                font-weight: 700;
+            }
+
+                .site-nav a.active .nav-paw {
+                    opacity: 1;
+                    filter: brightness(0) invert(1);
+                }
+
+        /* ============================================================ */
+        /* 全体ラッパー・ページタイトル                                  */
+        /* ============================================================ */
+        .wrap {
+            max-width: 1300px;
+            margin: 24px auto;
+            padding: 0 28px 64px;
+        }
+        .page-title {
+            max-width: 1100px;
+            margin: 60px auto;
+            padding-left: 5px;
+            font-size: 21px;
+            font-weight: 700;
+            text-align: left;
+        }
+
+        /* ============================================================ */
+        /* 登録フォーム領域（中央1列）＋ 応援する猫                       */
+        /* ============================================================ */
+        .form-area {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 60px;
+            position: relative;
+            left: -60px;
+        }
+        .form-area .reminder-block {
+            width: 100%;
+            max-width: 600px;
+        }
+        .cheer-cat {
+            position: absolute;
+            right: 100px;
+            top: 320px;
+            text-align: center;
+        }
+        .cat-balloon {
+            display: block;
+            width: 220px;
+            margin-bottom: -10px;
+            position: relative;
+            left: -70px;
+            top: 80px;
+        }
+        .cat-image {
+            display: block;
+            width: 250px;
+            margin-left: 80px;
+        }
+
+        /* ============================================================ */
+        /* 既存リマインダー一覧領域（2列グリッド）                       */
+        /* ============================================================ */
+        .list-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            max-width: 100%;
+        }
+        .list-area .reminder-block {
+            background: rgba(255, 255, 255, 0.35);
+            border-radius: 16px;
+            padding: 28px 30px;
+        }
+        .list-area .medicine-area {
+            max-width: 100%;
+        }
+        .reminder-block {
+            margin: 0;
+        }
+
+        /* ============================================================ */
+        /* 時刻行（薬アイコン ＋ 時刻入力 ＋ ラベル）                     */
+        /* ============================================================ */
+        .row-time {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            margin-bottom: 16px;
+            flex-wrap: nowrap;
+        }
+        /* 薬アイコン（capsule.png）。旧絵文字💊はフォールバック用 */
+        .pill-icon {
+            width: 65px;
+            height: auto;
+            display: block;
+            flex-shrink: 0;   /* 横並びで潰れないよう固定 */
+        }
+        .row-time .label {
+            font-size: 23px;
+            font-weight: 700;
+        }
+        .time-input {
+            width: 100px;
+            height: 70px;
+            border: none;
+            border-radius: 14px;
+            background: var(--time-bg);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+            text-align: center;
+            font-family: inherit;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--ink);
+        }
+        .time-input::-webkit-calendar-picker-indicator { display: none; }
+
+        /* ============================================================ */
+        /* C案：プリセットボタン（よく使う時刻）                         */
+        /* ============================================================ */
+        .preset-wrap {
+            max-width: 360px;
+            margin: 0 auto 14px;
+            text-align: center;
+        }
+        .preset-caption {
+            margin-bottom: 8px;
+            font-size: 16px;
+            color: var(--ink-soft);
+        }
+        .preset-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;   /* 2×2 配置 */
+            gap: 22px;
+        }
+        .preset-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 11px 20px;
+            border: 1.5px solid var(--orange);
+            border-radius: 12px;
+            background: #f9f9f9;
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .preset-btn:hover { background: #FCEFDD; }
+        /* 選択中（time-input と一致）：オレンジ塗りで「今ここ」を明示 */
+        .preset-btn.selected {
+            background: var(--orange);
+            color: #fff;
+            box-shadow: 0 2px 6px rgba(231, 155, 73, .4);
+        }
+        /* プリセットのアイコン画像 */
+        .preset-btn .emo {
+            width: 28px;
+            height: 28px;
+            margin-right: 4px;
+            vertical-align: middle;
+            object-fit: contain;   /* 画像が歪まないよう内接 */
+            display: inline-block;
+        }
+
+        /* ============================================================ */
+        /* 時刻の微調整（±5分／±1時間）                                 */
+        /* ============================================================ */
+        .adjust-wrap {
+            max-width: 360px;
+            margin: 0 auto 18px;
+            text-align: center;
+        }
+        .adjust-caption {
+            margin-bottom: 8px;
+            font-size: 16px;
+            color: var(--ink-soft);
+        }
+        .adjust-grid {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .adjust-btn {
+            min-width: 70px;
+            padding: 8px 10px;
+            border: 1.5px solid var(--ink-soft);
+            border-radius: 12px;
+            background: #fff;
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .adjust-btn:hover { background: #EFEAE0; }
+        .adjust-btn:active { transform: scale(0.96); }
+
+        /* ============================================================ */
+        /* 薬の種類入力ボックス                                          */
+        /* ============================================================ */
+        .medicine-area {
+            max-width: 560px;
+            min-height: 120px;
+            margin: 0 auto;
+            padding: 27px 36px;
+            border-radius: 14px;
+            background: var(--note);
+        }
+        .medicine-area textarea {
+            width: 100%;
+            min-height: 44px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--ink);
+            resize: none;
+            outline: none;
+        }
+        .medicine-area textarea::placeholder { color: #B6AC8E; }
+
+        /* ============================================================ */
+        /* 送信行・各種ボタン                                            */
+        /* ============================================================ */
+        .submit-row {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 14px;
+        }
+        .submit-btn {
+            margin: 24px 0 32px;
+            padding: 12px 48px;
+            border: none;
+            border-radius: 24px;
+            background: var(--orange);
+            color: #fff;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: .05em;
+            text-align: center;
+            cursor: pointer;
+        }
+        .submit-btn:hover { filter: brightness(.95); }
+
+        .delete-btn {
+            padding: 10px 22px;
+            border: 1px solid #B05A4A;
+            border-radius: 24px;
+            background: transparent;
+            color: #B05A4A;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .delete-btn:hover { background: #FBEEEA; }
+
+        .inactive-tag {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #EEE;
+            color: #777;
+            font-size: 12px;
+        }
+
+        /* 登録の左に置く戻るボタン（副アクション＝枠線スタイル） */
+        .back-btn-inline {
+            margin: 24px 0 32px;   /* .submit-btn と同値にして高さを揃える */
+            padding: 12px 48px;
+            border: 1.5px solid var(--orange);
+            border-radius: 24px;
+            background: #fff;
+            color: var(--orange);
+            font-family: inherit;
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: .05em;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .back-btn-inline:hover { background: #FCEFDD; }
+
+        /* ページ下部の戻るボタン */
+        .back-button-wrapper {
+            margin: 40px 0 8px;
+            text-align: center;
+        }
+        .back-button {
+            padding: 12px 48px;
+            border: none;
+            border-radius: 999px;
+            background: #fff;
+            color: var(--orange);
+            font-family: "Zen Maru Gothic", sans-serif;
+            font-weight: 700;
+            font-size: 18px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .back-button:hover { opacity: 0.85; }
+
+        /* ============================================================ */
+        /* レスポンシブ：スマホは一覧を1列に                             */
+        /* ============================================================ */
+        @media (max-width: 768px) {
+            .list-area { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    {# ============================================================ #}
+    {# サイトヘッダー（現在ページ＝リマインダー設定を .active で強調） #}
+    {# ============================================================ #}
+    <header class="site-header">
+
+        <a href="{% url 'tracker:home' %}" class="brand">
+
+            <img src="{% static 'tracker/img/cat_logo.png' %}" alt="ねこのひげ">
+
+        </a>
+        <nav class="site-nav">
+            <a href="{% url 'tracker:pain_create' %}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+                痛みの記録
+            </a>
+            <a href="{% url 'tracker:charts' %}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+                見える化
+            </a>
+            <a href="{% url 'tracker:weather_risk' %}">
+                <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+                痛み予報
+            </a>
+            <a href="{% url 'tracker:reminder' %}" class="active">
+                <img src="{% static 'tracker/img/paw.png' %}" class="nav-paw" alt="">
+                リマインダー設定
+            </a>
+        </nav>
+    </header>
+
+    <div class="wrap">
+        <h1 class="page-title">服薬リマインダー設定</h1>
+
+        {# ============================================================ #}
+        {# 登録フォーム領域（中央1列）                                   #}
+        {# ============================================================ #}
+        <div class="form-area">
+            <form class="reminder-block" method="post" action="{% url 'tracker:reminder' %}">
+                {% csrf_token %}
+
+                <div class="row-time">
+                    {# 薬アイコン：capsule.png。読み込み失敗時は💊絵文字に戻す #}
+                    <img class="pill-icon"
+                         src="{% static 'tracker/img/capsule.png' %}"
+                         onerror="this.onerror=null; this.outerHTML='<span class=&quot;pill-icon&quot; style=&quot;font-size:28px;&quot;>💊</span>';"
+                         alt="薬">
+                    <span class="label">毎</span>
+                    {# 送信値は reminder_time(HH:MM)。プリセット・微調整・手動いずれもここに入る #}
+                    <input type="time" name="reminder_time" id="reminderTime" class="time-input" required>
+                    <span class="label">にリマインド</span>
+                </div>
+
+                {# C案：よく使う時刻をワンタップで反映するプリセット #}
+                <div class="preset-wrap">
+                    <div class="preset-caption">よく使う時刻（タップで入力）</div>
+                    <div class="preset-grid">
+                        {# data-time に HH:MM を持たせ、JSで time-input に流し込む #}
+                        <button type="button" class="preset-btn" data-time="08:00">
+                            <img class="emo" src="{% static 'tracker/img/asa.png' %}" alt="朝" decoding="async" loading="lazy">朝 8:00
+                        </button>
+                        <button type="button" class="preset-btn" data-time="12:00">
+                            <img class="emo" src="{% static 'tracker/img/hiru.png' %}" alt="昼" decoding="async" loading="lazy">昼 12:00
+                        </button>
+                        <button type="button" class="preset-btn" data-time="18:00">
+                            <img class="emo" src="{% static 'tracker/img/yugata.png' %}" alt="夕" decoding="async" loading="lazy">夕 18:00
+                        </button>
+                        <button type="button" class="preset-btn" data-time="20:00">
+                            <img class="emo" src="{% static 'tracker/img/yoru.png' %}" alt="夜" decoding="async" loading="lazy">夜 20:00
+                        </button>
+                    </div>
+                </div>
+
+                {# 微調整：プリセット時刻から ±分／±時間 でずらす #}
+                <div class="adjust-wrap">
+                    <div class="adjust-caption">時刻を微調整</div>
+                    <div class="adjust-grid">
+                        {# data-min に「加算する分数」を持たせ、JSで加減算 #}
+                        <button type="button" class="adjust-btn" data-min="-60">− 1時間</button>
+                        <button type="button" class="adjust-btn" data-min="-5">− 5分</button>
+                        <button type="button" class="adjust-btn" data-min="5">＋ 5分</button>
+                        <button type="button" class="adjust-btn" data-min="60">＋ 1時間</button>
+                    </div>
+                </div>
+
+                <div class="medicine-area">
+                    <textarea name="medicine_name" placeholder="薬の種類" required></textarea>
+                </div>
+
+                <div class="submit-row">
+                    <button type="button" class="back-btn-inline"
+                            onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
+                        戻る
+                    </button>
+                    <button type="submit" class="submit-btn">登録</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="cheer-cat">
+            <img src="{% static 'tracker/img/erai.png' %}" class="cat-balloon" alt="おくすりのんでえらーい">
+            <img src="{% static 'tracker/img/perori.png' %}" class="cat-image" alt="猫">
+        </div>
+
+        {# ============================================================ #}
+        {# 既存リマインダー一覧領域（2列グリッド・readonly）             #}
+        {# ============================================================ #}
+        <div class="list-area">
+            {% for rm in reminders %}
+            <form class="reminder-block" method="post" action="{% url 'tracker:reminder' %}">
+                {% csrf_token %}
+                <div class="row-time">
+                    {# 薬アイコン：capsule.png。読み込み失敗時は💊絵文字に戻す #}
+                    <img class="pill-icon"
+                         src="{% static 'tracker/img/capsule.png' %}"
+                         onerror="this.onerror=null; this.outerHTML='<span class=&quot;pill-icon&quot; style=&quot;font-size:28px;&quot;>💊</span>';"
+                         alt="薬">
+                    <span class="label">毎</span>
+                    <input type="time" name="reminder_time_view" class="time-input" value="{{ rm.reminder_time|time:'H:i' }}" readonly>
+                    <span class="label">
+                        にリマインド
+                        {% if not rm.is_active %}<span class="inactive-tag">停止中</span>{% endif %}
+                    </span>
+                </div>
+                <div class="medicine-area">
+                    <textarea readonly>{{ rm.medicine_name }}</textarea>
+                </div>
+                <div class="submit-row">
+                    <input type="hidden" name="delete_id" value="{{ rm.pk }}">
+                    <button type="submit" class="delete-btn" onclick="return confirm('このリマインダーを削除しますか？');">削除</button>
+                </div>
+            </form>
+            {% endfor %}
+        </div>
+
+        {# ============================================================ #}
+        {# ページ下部の戻るボタン                                        #}
+        {# ============================================================ #}
+        <div class="back-button-wrapper">
+            <button class="back-button"
+                    onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
+                戻る
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // ============================================================
+        // C案：プリセット ＋ 微調整 制御
+        //  1) プリセット押下 → time-input に HH:MM を入れる
+        //  2) 微調整(±分/±時間)押下 → 現在値を加減算（24時間ループ）
+        //  3) time-input の値と一致するプリセットをオレンジ強調(.selected)
+        //  4) 手動編集にも追従して強調を再判定
+        // ============================================================
+        (function () {
+            const timeInput = document.getElementById('reminderTime');
+            const presetButtons = document.querySelectorAll('.preset-btn');
+            const adjustButtons = document.querySelectorAll('.adjust-btn');
+
+            // "HH:MM" → 0〜1439 の総分に変換（空なら null）
+            function toMinutes(hhmm) {
+                if (!hhmm || hhmm.indexOf(':') === -1) return null;
+                const parts = hhmm.split(':');
+                const h = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10);
+                if (isNaN(h) || isNaN(m)) return null;
+                return h * 60 + m;
+            }
+
+            // 総分 → "HH:MM"（0埋め）。24時間でループさせる
+            function toHHMM(total) {
+                // ((total % 1440) + 1440) % 1440 で負値も正しく丸める
+                const t = ((total % 1440) + 1440) % 1440;
+                const h = String(Math.floor(t / 60)).padStart(2, '0');
+                const m = String(t % 60).padStart(2, '0');
+                return h + ':' + m;
+            }
+
+            // time-input の値と一致するプリセットに .selected を付け直す
+            function syncSelected() {
+                const cur = timeInput.value;   // "HH:MM" or ""
+                presetButtons.forEach(function (btn) {
+                    btn.classList.toggle('selected', btn.dataset.time === cur);
+                });
+            }
+
+            // プリセット押下：時刻を反映
+            presetButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    timeInput.value = btn.dataset.time;
+                    syncSelected();
+                });
+            });
+
+            // 微調整押下：現在値を加減算（未入力なら 08:00 を起点にする）
+            adjustButtons.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const delta = parseInt(btn.dataset.min, 10) || 0;
+                    let base = toMinutes(timeInput.value);
+                    if (base === null) base = 8 * 60;   // 未入力時の起点 = 8:00
+                    timeInput.value = toHHMM(base + delta);
+                    syncSelected();
+                });
+            });
+
+            // 手動編集にも追従
+            timeInput.addEventListener('input', syncSelected);
+            timeInput.addEventListener('change', syncSelected);
+
+            // 初期表示（既定値があれば強調）
+            syncSelected();
+        })();
+    </script>
+
+</body>
+</html>

@@ -1,0 +1,377 @@
+{% load static %}
+
+{# URLを変数化（属性内の{% url %}欠落を防ぐ） #}
+{% url 'tracker:home' as url_home %}
+{% url 'tracker:pain_create' as url_pc %}
+{% url 'tracker:charts' as url_ch %}
+{% url 'tracker:reminder' as url_rm %}
+{% url 'tracker:weather_risk' as url_risk %}
+{% url 'tracker:pain_history' as url_hist %}
+{% url 'tracker:pain_edit' record.pk as url_edit %}
+
+{# 静的画像を変数化 #}
+{% static 'tracker/img/cat_logo.png' as img_logo %}
+{% static 'tracker/img/face_0.png' as img_face0 %}
+{% static 'tracker/img/face_1.png' as img_face1 %}
+{% static 'tracker/img/face_2.png' as img_face2 %}
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>履歴の編集 | ねこのひげ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #E0DBD0;
+            --header: #33503F;
+            --header-ink: #F2E7CB;
+            --card: #FFFFFF;
+            --ink: #3E5C4D;
+            --ink-soft: #6E7D72;
+            --orange: #E79B49;
+            --green: #4B6B58;
+            --mint: #7FA593;
+            --red: #C95B5B;
+            --gray: #B7B0A3;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            font-family: "Zen Maru Gothic","Meiryo UI",sans-serif;
+            color: var(--ink);
+        }
+        .site-header {
+            background: var(--header);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+        }
+        .brand img { height: 46px; display: block; }
+        .site-nav { display: flex; gap: 28px; }
+        .site-nav a {
+            color: var(--header-ink);
+            text-decoration: underline;
+            font-weight: 500;
+            font-size: 16px;
+        }
+        .site-nav a::before {
+            content: "\01F43E ";
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 4px;
+        }
+        .page-head { max-width: 640px; margin: 32px auto 16px; padding: 0 24px; }
+        .page-title { font-size: 24px; font-weight: 700; margin: 0 0 4px; }
+        .page-sub { font-size: 13px; color: var(--ink-soft); margin: 0; }
+        .form-card {
+            background: var(--card);
+            border-radius: 14px;
+            padding: 24px 28px;
+            box-shadow: 0 4px 18px rgba(0,0,0,.06);
+            max-width: 640px;
+            margin: 0 auto;
+            width: calc(100% - 48px);
+        }
+        .field { margin-bottom: 18px; }
+        .field label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 15px;
+        }
+        .field input[type="date"],
+        .field input[type="text"],
+        .field select,
+        .field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #D6D2C8;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            background: #FFF;
+            color: var(--ink);
+        }
+        .field textarea { resize: vertical; min-height: 88px; }
+        .field input[readonly] { background: #F7F5EE; color: var(--ink-soft); }
+        .level-wrap {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 6px;
+            background: #FAF8F2;
+            border: 1px solid #E5E0D2;
+            border-radius: 10px;
+        }
+        .level-radio {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .face {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            background: #F1ECE2;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all .15s ease;
+            user-select: none;
+        }
+        .face img { width: 56px; height: 56px; pointer-events: none; }
+        .face:hover { background: #EAE3D2; transform: translateY(-2px); }
+        .level-radio:checked + .face {
+            border-color: var(--green);
+            background: #FFF;
+            transform: scale(1.08);
+            box-shadow: 0 4px 12px rgba(75, 107, 88, .25);
+        }
+        .level-radio:focus-visible + .face {
+            outline: 2px dashed var(--green);
+            outline-offset: 2px;
+        }
+        .action-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-top: 8px;
+        }
+        .save-btn {
+            flex: 1;
+            background: var(--orange);
+            color: #FFF;
+            font-weight: 700;
+            font-size: 16px;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            letter-spacing: .05em;
+        }
+        .save-btn:hover { filter: brightness(.95); }
+        .back-btn {
+            background: var(--gray);
+            color: #FFF;
+            font-weight: 700;
+            font-size: 15px;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .back-btn:hover { filter: brightness(.95); }
+        .cancel-link {
+            background: var(--mint);
+            color: #FFF;
+            text-decoration: none;
+            font-weight: 700;
+            padding: 14px 22px;
+            border-radius: 10px;
+            font-size: 15px;
+        }
+        .cancel-link:hover { filter: brightness(.95); }
+        .delete-wrap {
+            max-width: 640px;
+            margin: 18px auto 60px;
+            padding: 0 24px;
+            text-align: center;
+        }
+        .delete-btn {
+            background: transparent;
+            color: var(--red);
+            border: 1px solid var(--red);
+            padding: 10px 22px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .delete-btn:hover { background: var(--red); color: #FFF; }
+        @media (max-width: 540px) {
+            .action-row { flex-direction: column; }
+            .back-btn, .cancel-link, .save-btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="site-header">
+        <a href="{{ url_home }}" class="brand">
+            <img src="{{ img_logo }}" alt="ねこのひげ">
+        </a>
+        <nav class="site-nav">
+            <a href="{{ url_pc }}">痛みの記録</a>
+            <a href="{{ url_ch }}">見える化</a>
+            <a href="{{ url_risk }}">痛み予報</a>
+            <a href="{{ url_rm }}">リマインダー設定</a>
+        </nav>
+    </header>
+
+    <div class="page-head">
+        <h1 class="page-title">履歴の編集</h1>
+        <p class="page-sub">ID: {{ record.pk }} / 作成: {{ record.recorded_at|date:"Y/m/d H:i" }}</p>
+    </div>
+
+    <form class="form-card" method="post" action="{{ url_edit }}">
+        {% csrf_token %}
+
+        {# 日付（時刻はhiddenで保持。既存時刻を上書きしないため） #}
+        <div class="field">
+            <label for="recorded_date">日付</label>
+            <input type="date" id="recorded_date" name="recorded_date"
+                   value="{{ recorded_date }}" required>
+        </div>
+        {# 時刻はUIから消すが、既存値をhiddenで送信して保持 #}
+        <input type="hidden" name="recorded_time" value="{{ recorded_time }}">
+
+        <div class="field">
+            <label>痛みレベル</label>
+            <div class="level-wrap" data-current-level="{{ record.level }}">
+                <input type="radio" id="lv1" name="level" value="1" class="level-radio">
+                <label for="lv1" class="face" title="痛くない">
+                    <img src="{{ img_face0 }}" alt="痛くない"
+                         onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'\U0001F63A'}));">
+                </label>
+                <input type="radio" id="lv2" name="level" value="2" class="level-radio">
+                <label for="lv2" class="face" title="普通">
+                    <img src="{{ img_face1 }}" alt="普通"
+                         onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'\U0001F63F'}));">
+                </label>
+                <input type="radio" id="lv3" name="level" value="3" class="level-radio">
+                <label for="lv3" class="face" title="痛い">
+                    <img src="{{ img_face2 }}" alt="痛い"
+                         onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'\U0001F640'}));">
+                </label>
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="pressure_display">気圧(hPa)</label>
+            <input type="text" id="pressure_display"
+                   value="{% if current_pressure %}{{ current_pressure }}{% endif %}"
+                   placeholder="参考値" readonly>
+        </div>
+
+        <div class="field" id="pain_type_section">
+            <label for="pain_type">どんな不調?</label>
+            <select id="pain_type" name="pain_type"
+                    data-original="{{ record.pain_type|default_if_none:'' }}">
+                <option value="">選択してください</option>
+                {% for v, label in pain_type_choices %}
+                <option value="{{ v }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+            <div id="other_wrap" style="display: none; margin-top: 10px;">
+                <input type="text" id="pain_type_other" name="pain_type_other"
+                       maxlength="50"
+                       placeholder="不調を自由に入力（最大50文字）">
+            </div>
+        </div>
+
+        <div class="field">
+            <label for="memo">ひとこと日記・メモ</label>
+            <textarea id="memo" name="memo" maxlength="140"
+                      placeholder="例: 朝から頭が重い…">{{ record.memo }}</textarea>
+        </div>
+
+        <div class="action-row">
+            <button type="button" class="back-btn" onclick="history.back();">&larr; 戻る</button>
+            <button type="submit" class="save-btn">保存</button>
+            <a href="{{ url_hist }}" class="cancel-link">キャンセル</a>
+        </div>
+    </form>
+
+    <div class="delete-wrap">
+        <form method="post" action="{{ url_edit }}"
+              onsubmit="return confirm('この記録を削除します。よろしいですか?');">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <button type="submit" class="delete-btn">この記録を削除する</button>
+        </form>
+    </div>
+
+    <script>
+        const levelWrap = document.querySelector('.level-wrap');
+        const levelRadios = document.querySelectorAll('input[name="level"]');
+        const painTypeSection = document.getElementById('pain_type_section');
+        const select = document.getElementById("pain_type");
+        const wrap   = document.getElementById("other_wrap");
+        const input  = document.getElementById("pain_type_other");
+
+        function applyInitialLevel() {
+            const lv = parseInt(levelWrap.dataset.currentLevel) || 1;
+            const target = document.getElementById('lv' + lv);
+            if (target) target.checked = true;
+        }
+        function applyInitialPainType() {
+            const original = select.dataset.original || "";
+            if (!original) return;
+            const matched = Array.from(select.options).find(opt => opt.value === original);
+            if (matched) select.value = original;
+        }
+        function togglePainTypeSection() {
+            const sel = document.querySelector('input[name="level"]:checked');
+            const level = sel ? parseInt(sel.value) : 1;
+            if (level === 1) {
+                painTypeSection.style.display = 'none';
+                select.removeAttribute('required');
+                select.value = '';
+                wrap.style.display = 'none';
+                input.removeAttribute('required');
+                input.value = '';
+            } else {
+                painTypeSection.style.display = 'block';
+                select.setAttribute('required', '');
+            }
+        }
+        function showOther(v) {
+            wrap.style.display = "block";
+            input.required = true;
+            if (v !== undefined) input.value = v;
+        }
+        function hideOther() {
+            wrap.style.display = "none";
+            input.required = false;
+            input.value = "";
+        }
+        function toggleOther() {
+            if (select.value === "その他") showOther();
+            else hideOther();
+        }
+        (function init() {
+            applyInitialLevel();
+            applyInitialPainType();
+            const lv = parseInt(levelWrap.dataset.currentLevel) || 1;
+            if (lv === 1) {
+                painTypeSection.style.display = 'none';
+                select.removeAttribute('required');
+                return;
+            }
+            painTypeSection.style.display = 'block';
+            select.setAttribute('required', '');
+            const o = select.dataset.original || "";
+            const m = Array.from(select.options).some(opt => opt.value === o && opt.value !== "");
+            if (!m && o !== "") {
+                const ot = Array.from(select.options).find(opt => opt.value === "その他");
+                if (ot) { select.value = "その他"; showOther(o); return; }
+            }
+            toggleOther();
+        })();
+        levelRadios.forEach(radio => radio.addEventListener('change', togglePainTypeSection));
+        select.addEventListener("change", toggleOther);
+    </script>
+
+</body>
+</html>
