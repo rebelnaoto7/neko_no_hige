@@ -344,9 +344,29 @@ def pain_create(request):
 
     # --- GET: フォーム描画 ---
     now = timezone.localtime()
-    wr = _nearest_weather(now)  # 参考表示用の現在気圧
+
+    # ★見える化ページの猫クリックから来た場合、対象日を初期表示に反映（?date=YYYY-MM-DD）
+    #   ・不正・未指定なら今日にフォールバック（安全側）
+    prefill_date_obj = now.date()
+    date_param = request.GET.get('date', '').strip()
+    if date_param:
+        try:
+            prefill_date_obj = timezone.datetime.strptime(date_param, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            prefill_date_obj = now.date()
+
+    # 参考気圧：対象日が今日なら「現在」、過去日ならその日の正午に最も近い実測を表示
+    #   （readonly の参考欄。実際の突合気圧は表示時に recorded_at で再計算される）
+    if prefill_date_obj == now.date():
+        ref_dt = now
+    else:
+        ref_naive = timezone.datetime.combine(
+            prefill_date_obj, timezone.datetime.min.time().replace(hour=12))
+        ref_dt = timezone.make_aware(ref_naive, now.tzinfo)
+    wr = _nearest_weather(ref_dt)  # 参考表示用の気圧
+
     return render(request, 'tracker/pain_create.html', {
-        'today': now.date().isoformat(),
+        'today': prefill_date_obj.isoformat(),
         'current_pressure': wr.pressure_hpa if wr else None,
         'pain_type_choices': PAIN_TYPE_CHOICES,
     })
@@ -558,6 +578,9 @@ def charts(request):
         week.append({
             'date_label': f"{d.month}/{d.day}",
             'dow': WD[d.weekday()],
+            # ★見える化の猫クリック→その日の記録を編集/新規作成へ遷移するための情報
+            'date_iso': d.isoformat(),        # その日（YYYY-MM-DD）＝新規作成のプリフィル日付に使う
+            'pk': pr.pk if pr else None,      # 記録があれば編集用のpk、無ければ None（→その日付で新規作成）
             # 天気アイコン分岐用。欠測時は曇(2)を仮表示（テーブルが崩れないため既定維持）
             'weather_code': getattr(wr, 'weather_code', 2),
             # ツールチップ表示用の天気ラベル（実測が無い日は「—」＝仮表示しない）

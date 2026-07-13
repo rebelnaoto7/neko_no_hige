@@ -107,6 +107,14 @@
         .legend .dot  { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 3px solid; }
         .legend .band { width: 16px; height: 14px; border-radius: 3px; display: inline-block; background: rgba(209,91,74,.16); }
 
+        /* 🐾 猫がクリック可能であることを伝える案内文 */
+        .chart-hint {
+            display: flex; align-items: center; gap: 6px;
+            margin: -6px 4px 16px;
+            font-size: 12.5px;
+            color: var(--ink-soft);
+        }
+
         .memo-title {
             font-size: 20px; font-weight: 700; text-align: center;
             margin: 4px 0 18px; letter-spacing: .04em;
@@ -219,32 +227,32 @@
             transition: opacity .12s ease;
         }
         .nhtt-card {
-            min-width: 208px;
-            max-width: 288px;
+            min-width: 150px;
+            max-width: 190px;
             background: #FBF8F1;
             border: 1px solid #E4DDCE;
             border-left: 5px solid #B9C3BC;   /* 痛みの強さ色で上書きされる */
             border-radius: 14px;
             box-shadow: 0 8px 24px rgba(46,74,58,0.20);
-            padding: 11px 13px;
+            padding: 8px 10px;
             font-family: "Zen Maru Gothic","Meiryo UI",sans-serif;
             color: var(--ink);
-            font-size: 12.5px;
-            line-height: 1.55;
+            font-size: 11px;
+            line-height: 1.45;
         }
         .nhtt-head {
             display: flex; align-items: baseline; justify-content: space-between;
-            gap: 10px; margin-bottom: 7px;
-            border-bottom: 1px dashed #E4DDCE; padding-bottom: 6px;
+            gap: 8px; margin-bottom: 5px;
+            border-bottom: 1px dashed #E4DDCE; padding-bottom: 5px;
         }
-        .nhtt-date { font-weight: 700; font-size: 14px; letter-spacing: .02em; }
+        .nhtt-date { font-weight: 700; font-size: 12.5px; letter-spacing: .02em; }
         .nhtt-time { font-size: 11.5px; color: var(--ink-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
         .nhtt-pain { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 2px; }
-        .nhtt-lvlabel { font-weight: 700; font-size: 14px; }
+        .nhtt-lvlabel { font-weight: 700; font-size: 12.5px; }
         .nhtt-bar { display: inline-flex; gap: 3px; flex: 0 0 auto; }
         .nhtt-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-        .nhtt-kv { display: flex; gap: 8px; margin-top: 3px; }
-        .nhtt-k { flex: 0 0 auto; width: 70px; color: var(--ink-soft); font-size: 11.5px; }
+        .nhtt-kv { display: flex; gap: 6px; margin-top: 2px; }
+        .nhtt-k { flex: 0 0 auto; width: 58px; color: var(--ink-soft); font-size: 10.5px; }
         .nhtt-v { flex: 1 1 auto; }
         .nhtt-memo { color: var(--ink); }
         .nhtt-norec { color: #8A9A8E; font-size: 12px; padding: 3px 0 1px; }
@@ -303,6 +311,9 @@
             <span class="item"><span class="dot" style="border-color:#E0A23C;"></span>記録した痛み 中</span>
             <span class="item"><span class="dot" style="border-color:#D15B4A;"></span>記録した痛み 強</span>
         </div>
+
+        {# 🐾 猫クリックでその日の記録を追加・修正できる案内 #}
+        <p class="chart-hint">🐾 猫（またはその日の列）をクリックすると、その日の痛みの記録を追加・修正できます。</p>
 
         {# ============================================================ #}
         {# 観測地点カード：1行・薄型。data-lat/lon は自動取得の比較用     #}
@@ -370,7 +381,7 @@
         {# ========================= 戻るボタン ========================= #}
         <div class="back-button-wrapper">
             <button class="back-button"
-                    onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
+                    onclick="location.href='{% url 'tracker:home' %}'">
                 戻る
             </button>
         </div>
@@ -385,6 +396,26 @@
         // 0) 設定・データ準備
         // ============================================================
         const week = JSON.parse(document.getElementById('week-data').textContent);
+
+        // ============================================================
+        // ★猫クリック → その日の記録を編集/新規作成へ遷移するためのURL
+        //   ・記録がある日  … pain_edit（既存レコードを pk で編集）
+        //   ・記録が無い日  … pain_create にその日付を渡して新規作成
+        //   URLは Django の url タグで生成（プレフィックス配下でも壊れない）。
+        //   編集URLはダミーpk(999999)で作り、実際のpkに差し替えて使う。
+        // ============================================================
+        const PAIN_CREATE_URL    = "{% url 'tracker:pain_create' %}";           // 例: /pain/
+        const PAIN_EDIT_URL_TMPL = "{% url 'tracker:pain_edit' 999999 %}";      // 例: /pain/999999/edit/
+
+        // 指定日(index)の遷移先URLを返す（pkがあれば編集、無ければその日付で新規作成）
+        function dayEditUrl(i) {
+            const d = week[i];
+            if (!d) return null;
+            if (d.pk != null) {
+                return PAIN_EDIT_URL_TMPL.replace('999999', d.pk);
+            }
+            return PAIN_CREATE_URL + '?date=' + encodeURIComponent(d.date_iso || '');
+        }
 
         const WARNING = 1010;
 
@@ -681,6 +712,20 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 layout: { padding: { left: 4, top: 10, right: 8 } },
+                // ★猫（またはその日の列）をクリック → その日の記録を編集/新規作成へ。
+                //   ツールチップと同じ mode:'index'（列単位）で対象日を特定するので、
+                //   猫アイコンでも気圧線でも「その日」の編集画面が開く（ヒット領域が広く押しやすい）。
+                onClick: (evt, _els, chart) => {
+                    const pts = chart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
+                    if (!pts.length) return;
+                    const url = dayEditUrl(pts[0].index);
+                    if (url) window.location.href = url;
+                },
+                // ホバー中はカーソルを指マークにして「押せる」ことを示す
+                onHover: (evt, _els, chart) => {
+                    const pts = chart.getElementsAtEventForMode(evt, 'index', { intersect: false }, true);
+                    chart.canvas.style.cursor = pts.length ? 'pointer' : 'default';
+                },
                 plugins: {
                     legend: { display: false },
                     tooltip: {

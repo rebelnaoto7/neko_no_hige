@@ -434,41 +434,41 @@
             transition: opacity .12s ease;
         }
         .wtt-card {
-            min-width: 200px;
-            max-width: 284px;
+            min-width: 116px;
+            max-width: 148px;
             background: var(--card2);
             border: 1px solid var(--border);
-            border-left: 5px solid #cdbfa6;   /* リスク色で上書き */
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(47,74,58,.20);
-            padding: 11px 13px;
+            border-left: 4px solid #cdbfa6;   /* リスク色で上書き */
+            border-radius: 10px;
+            box-shadow: 0 6px 20px rgba(47,74,58,.20);
+            padding: 6px 8px;
             font-family: "Meiryo UI","Meiryo",sans-serif;
             color: var(--ink);
-            font-size: 12.5px;
-            line-height: 1.55;
+            font-size: 10px;
+            line-height: 1.35;
         }
         .wtt-head {
             display: flex; align-items: baseline; justify-content: space-between;
-            gap: 8px; margin-bottom: 7px;
-            border-bottom: 1px dashed var(--border); padding-bottom: 6px;
+            gap: 5px; margin-bottom: 4px;
+            border-bottom: 1px dashed var(--border); padding-bottom: 4px;
         }
-        .wtt-title { font-weight: 700; font-size: 13.5px; }
+        .wtt-title { font-weight: 700; font-size: 10.5px; }
         .wtt-badge {
-            color: #fff; font-size: 10.5px; font-weight: 700;
-            padding: 1px 8px; border-radius: 999px; white-space: nowrap; flex: 0 0 auto;
+            color: #fff; font-size: 9px; font-weight: 700;
+            padding: 1px 6px; border-radius: 999px; white-space: nowrap; flex: 0 0 auto;
         }
-        .wtt-kv { display: flex; gap: 8px; margin-top: 3px; }
-        .wtt-k { flex: 0 0 auto; width: 78px; color: var(--sub); font-size: 11.5px; }
+        .wtt-kv { display: flex; gap: 5px; margin-top: 1px; }
+        .wtt-k { flex: 0 0 auto; width: 52px; color: var(--sub); font-size: 9px; }
         .wtt-v { flex: 1 1 auto; }
         .wtt-risk {
-            display: inline-block; min-width: 16px; text-align: center;
-            color: #fff; font-weight: 700; font-size: 11px;
-            padding: 1px 8px; border-radius: 999px;
+            display: inline-block; min-width: 15px; text-align: center;
+            color: #fff; font-weight: 700; font-size: 9.5px;
+            padding: 0 6px; border-radius: 999px;
         }
-        .wtt-riskdesc { font-size: 11px; color: var(--sub); }
+        .wtt-riskdesc { font-size: 9.5px; color: var(--sub); }
         .wtt-note {
-            margin-top: 8px; padding-top: 7px; border-top: 1px dashed var(--border);
-            font-size: 11px; color: #b06a5a; line-height: 1.5;
+            margin-top: 6px; padding-top: 5px; border-top: 1px dashed var(--border);
+            font-size: 9.5px; color: #b06a5a; line-height: 1.4;
         }
 
         /* ============================================================ */
@@ -491,16 +491,12 @@
 
         /* ヘッダーの画像（タイトルのグラフアイコン・猫アイコン） */
         .head h1 .title-icon { height: 30px; width: auto; display: block; }
-        .cat {
-            line-height: 1;
+        .cat img {
+            width: 60px;
+            height: 60px;
+            object-fit: contain;   /* つの設定 */
+            display: block;
         }
-
-            .cat img {
-                width: 60px;
-                height: 60px;
-                object-fit: contain;
-                display: block;
-            }
     </style>
 </head>
 <body>
@@ -600,7 +596,7 @@
         {# ===== 戻るボタン ===== #}
         <div class="back-button-wrapper">
             <button class="back-button"
-                    onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
+                    onclick="location.href='{% url 'tracker:home' %}'">
                 戻る
             </button>
         </div>
@@ -669,11 +665,16 @@
             };
         });
 
-        // --- ★Y軸は固定レンジ（1002〜1018 hPa）---
-        //   ユーザー指定により、気圧グラフの縦軸を 1002〜1018 に固定する（2hPa刻み）。
-        //   ※このレンジ外の気圧はグラフ上でクリップされて見えなくなる点に注意。
-        //     予報が 1002 未満や 1018 超に振れた場合は、その部分が枠外に出る。
-        const yMin = 1002, yMax = 1018, yStep = 2;
+        // --- ★Y軸：基本は 1002〜1018 固定。ただしデータがはみ出す時だけ自動で広げる（下切れ防止）---
+        //   ・通常は 1002〜1018 に固定（気圧の小さな変化を見やすくするため）。
+        //   ・予報などが 1002 未満／1018 超に振れたら、その分だけ枠を広げて切れないようにする。
+        const _valP = pressures.filter(v => v != null && !isNaN(v));
+        let yMin = 1002, yMax = 1018, yStep = 2;
+        if (_valP.length) {
+            const pMin = Math.min(..._valP), pMax = Math.max(..._valP);
+            if (pMin < 1002) yMin = Math.floor((pMin - 1) / 2) * 2;  // 下にはみ出す時だけ拡張
+            if (pMax > 1018) yMax = Math.ceil((pMax + 1) / 2) * 2;   // 上にはみ出す時だけ拡張
+        }
 
         // 点が多い長期表示ではドットを消して線だけに（見やすさ優先）
         const ptR = pressures.length > 160 ? 0 : 2;
