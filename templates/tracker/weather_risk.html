@@ -42,7 +42,7 @@
             margin: 0;
             background: var(--bg);
             color: var(--ink);
-            padding: 0 24px 24px;   /* ★上端は余白ゼロ＝固定ナビをフラッシュ配置 */
+            padding: 0 24px 24px; /* ★上端は余白ゼロ＝固定ナビをフラッシュ配置 */
         }
 
         /* ============================================================ */
@@ -52,27 +52,31 @@
             display: flex;
             align-items: center;
             gap: 28px;
-            margin: 0 -24px 24px;              /* 左右の余白を打ち消して全幅・上端フラッシュ */
+            margin: 0 -24px 24px; /* 左右の余白を打ち消して全幅・上端フラッシュ */
             background: #33503F;
             padding: 12px 28px;
-            position: sticky;                  /* ★スクロールしても上部に固定 */
+            position: sticky; /* ★スクロールしても上部に固定 */
             top: 0;
             z-index: 100;
         }
+
             .site-header .brand {
                 display: flex;
                 align-items: center;
                 text-decoration: none;
             }
-            .site-header .brand img {
-                height: 46px;
-                display: block;
-            }
+
+                .site-header .brand img {
+                    height: 46px;
+                    display: block;
+                }
+
         .site-nav {
             display: flex;
             gap: 8px;
             align-items: center;
         }
+
             .site-nav a {
                 display: flex;
                 align-items: center;
@@ -85,19 +89,23 @@
                 border-radius: 999px;
                 transition: background 0.2s, color 0.2s;
             }
+
                 .site-nav a .nav-paw {
                     width: 16px;
                     height: 16px;
                     opacity: 0.85;
                 }
+
                 .site-nav a:hover {
                     background: rgba(255, 255, 255, 0.12);
                 }
+
                 .site-nav a.active {
                     background: #E79B49;
                     color: #fff;
                     font-weight: 700;
                 }
+
                     .site-nav a.active .nav-paw {
                         opacity: 1;
                         filter: brightness(0) invert(1);
@@ -406,14 +414,50 @@
             border: 1px solid #eaddc0;
             border-radius: 10px;
             padding: 12px 14px;
-            font-size: 13px;
+            font-size: 16px;
             line-height: 1.7;
         }
 
-            .advice .h {
-                font-weight: bold;
-                margin-bottom: 4px;
-            }
+        .advice-head {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 10px;
+        }
+
+        .haru-advice-icon {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        .advice-title {
+            display: inline-block;
+            position: relative;
+            background: #F7DCCF;
+            color: #8A5C47;
+            padding: 8px 18px;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .advice .h {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .haru-advice-icon {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+        }
+
+
 
         @media(max-width:820px) {
             .grid2 {
@@ -433,48 +477,97 @@
             opacity: 0;
             transition: opacity .12s ease;
         }
+
         .wtt-card {
-            min-width: 116px;
-            max-width: 148px;
+            min-width: 200px;
+            max-width: 284px;
             background: var(--card2);
             border: 1px solid var(--border);
-            border-left: 4px solid #cdbfa6;   /* リスク色で上書き */
-            border-radius: 10px;
-            box-shadow: 0 6px 20px rgba(47,74,58,.20);
-            padding: 6px 8px;
+            border-left: 5px solid #cdbfa6; /* リスク色で上書き */
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(47,74,58,.20);
+            padding: 11px 13px;
             font-family: "Meiryo UI","Meiryo",sans-serif;
             color: var(--ink);
-            font-size: 10px;
-            line-height: 1.35;
+            font-size: 12.5px;
+            line-height: 1.55;
         }
+
         .wtt-head {
-            display: flex; align-items: baseline; justify-content: space-between;
-            gap: 5px; margin-bottom: 4px;
-            border-bottom: 1px dashed var(--border); padding-bottom: 4px;
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 7px;
+            border-bottom: 1px dashed var(--border);
+            padding-bottom: 6px;
         }
-        .wtt-title { font-weight: 700; font-size: 10.5px; }
+
+        .wtt-title {
+            font-weight: 700;
+            font-size: 13.5px;
+        }
+
         .wtt-badge {
-            color: #fff; font-size: 9px; font-weight: 700;
-            padding: 1px 6px; border-radius: 999px; white-space: nowrap; flex: 0 0 auto;
+            color: #fff;
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 1px 8px;
+            border-radius: 999px;
+            white-space: nowrap;
+            flex: 0 0 auto;
         }
-        .wtt-kv { display: flex; gap: 5px; margin-top: 1px; }
-        .wtt-k { flex: 0 0 auto; width: 52px; color: var(--sub); font-size: 9px; }
-        .wtt-v { flex: 1 1 auto; }
+
+        .wtt-kv {
+            display: flex;
+            gap: 8px;
+            margin-top: 3px;
+        }
+
+        .wtt-k {
+            flex: 0 0 auto;
+            width: 78px;
+            color: var(--sub);
+            font-size: 11.5px;
+        }
+
+        .wtt-v {
+            flex: 1 1 auto;
+        }
+
         .wtt-risk {
-            display: inline-block; min-width: 15px; text-align: center;
-            color: #fff; font-weight: 700; font-size: 9.5px;
-            padding: 0 6px; border-radius: 999px;
+            display: inline-block;
+            min-width: 16px;
+            text-align: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 11px;
+            padding: 1px 8px;
+            border-radius: 999px;
         }
-        .wtt-riskdesc { font-size: 9.5px; color: var(--sub); }
+
+        .wtt-riskdesc {
+            font-size: 11px;
+            color: var(--sub);
+        }
+
         .wtt-note {
-            margin-top: 6px; padding-top: 5px; border-top: 1px dashed var(--border);
-            font-size: 9.5px; color: #b06a5a; line-height: 1.4;
+            margin-top: 8px;
+            padding-top: 7px;
+            border-top: 1px dashed var(--border);
+            font-size: 11px;
+            color: #b06a5a;
+            line-height: 1.5;
         }
 
         /* ============================================================ */
         /* 戻るボタン（見える化ページと同じ形・オレンジのpill）           */
         /* ============================================================ */
-        .back-button-wrapper { text-align: center; margin: 24px 0 4px; }
+        .back-button-wrapper {
+            text-align: center;
+            margin: 24px 0 4px;
+        }
+
         .back-button {
             padding: 12px 42px;
             font-size: 16px;
@@ -487,16 +580,28 @@
             cursor: pointer;
             transition: 0.2s;
         }
-        .back-button:hover { opacity: 0.85; }
+
+            .back-button:hover {
+                opacity: 0.85;
+            }
 
         /* ヘッダーの画像（タイトルのグラフアイコン・猫アイコン） */
-        .head h1 .title-icon { height: 30px; width: auto; display: block; }
-        .cat img {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;   /* つの設定 */
+        .head h1 .title-icon {
+            height: 30px;
+            width: auto;
             display: block;
         }
+
+        .cat {
+            line-height: 1;
+        }
+
+            .cat img {
+                width: 60px;
+                height: 60px;
+                object-fit: contain;
+                display: block;
+            }
     </style>
 </head>
 <body>
@@ -587,7 +692,16 @@
                 <h2>🗓 今後10日間の天気痛リスク予報</h2>
                 <div class="timeline" id="timeline"></div>
                 <div class="advice">
-                    <div class="h">💡 おすすめの対策</div>
+                    <div class="advice-head">
+                        <img src="{% static 'tracker/img/haru_icon3.png' %}"
+                             alt="はるちゃん"
+                             class="haru-advice-icon">
+
+                        <span class="advice-title">
+                            おすすめの対策
+                        </span>
+                    </div>
+
                     {{ advice }}
                 </div>
             </div>
@@ -596,7 +710,7 @@
         {# ===== 戻るボタン ===== #}
         <div class="back-button-wrapper">
             <button class="back-button"
-                    onclick="location.href='{% url 'tracker:home' %}'">
+                    onclick="if (history.length > 1) { history.back(); } else { location.href='{% url 'tracker:home' %}'; }">
                 戻る
             </button>
         </div>
@@ -665,16 +779,11 @@
             };
         });
 
-        // --- ★Y軸：基本は 1002〜1018 固定。ただしデータがはみ出す時だけ自動で広げる（下切れ防止）---
-        //   ・通常は 1002〜1018 に固定（気圧の小さな変化を見やすくするため）。
-        //   ・予報などが 1002 未満／1018 超に振れたら、その分だけ枠を広げて切れないようにする。
-        const _valP = pressures.filter(v => v != null && !isNaN(v));
-        let yMin = 1002, yMax = 1018, yStep = 2;
-        if (_valP.length) {
-            const pMin = Math.min(..._valP), pMax = Math.max(..._valP);
-            if (pMin < 1002) yMin = Math.floor((pMin - 1) / 2) * 2;  // 下にはみ出す時だけ拡張
-            if (pMax > 1018) yMax = Math.ceil((pMax + 1) / 2) * 2;   // 上にはみ出す時だけ拡張
-        }
+        // --- ★Y軸は固定レンジ（1002〜1018 hPa）---
+        //   ユーザー指定により、気圧グラフの縦軸を 1002〜1018 に固定する（2hPa刻み）。
+        //   ※このレンジ外の気圧はグラフ上でクリップされて見えなくなる点に注意。
+        //     予報が 1002 未満や 1018 超に振れた場合は、その部分が枠外に出る。
+        const yMin = 1002, yMax = 1018, yStep = 2;
 
         // 点が多い長期表示ではドットを消して線だけに（見やすさ優先）
         const ptR = pressures.length > 160 ? 0 : 2;
@@ -687,7 +796,7 @@
         // ============================================================
         const WX_RISK_COLOR = { high: '#d9534f', mid: '#e5a13f', low: '#4faf7d' };
         const WX_RISK_LABEL = { high: '高', mid: '中', low: '低' };
-        const WX_RISK_DESC  = { high: '注意', mid: 'やや高め', low: '安定' };
+        const WX_RISK_DESC = { high: '注意', mid: 'やや高め', low: '安定' };
 
         function esc(s) {
             if (s == null) return '';
@@ -729,27 +838,27 @@
                 badgeColor = '#6f8f74';
             }
             html += '<div class="wtt-head"><span class="wtt-title">' + esc(title) + '</span>' +
-                    '<span class="wtt-badge" style="background:' + badgeColor + '">' + badge + '</span></div>';
+                '<span class="wtt-badge" style="background:' + badgeColor + '">' + badge + '</span></div>';
 
             // 気圧
             html += '<div class="wtt-kv"><span class="wtt-k">気圧</span><span class="wtt-v">' +
-                    (p != null ? p + ' hPa' : 'データなし') + '</span></div>';
+                (p != null ? p + ' hPa' : 'データなし') + '</span></div>';
 
             // 6時間後までのΔ（末尾で算出不可なら省略）
             if (dlt != null) {
                 const note = dlt <= -4 ? '（急降下）'
-                           : dlt <= -2 ? '（やや降下）'
-                           : dlt > 0   ? '（上昇）' : '（安定）';
+                    : dlt <= -2 ? '（やや降下）'
+                        : dlt > 0 ? '（上昇）' : '（安定）';
                 const dtxt = (dlt > 0 ? '+' : '') + dlt.toFixed(1) + ' hPa';
                 html += '<div class="wtt-kv"><span class="wtt-k">6時間後まで</span><span class="wtt-v">' +
-                        dtxt + note + '</span></div>';
+                    dtxt + note + '</span></div>';
             }
 
             // 気圧リスク（低/中/高）
             if (rk) {
                 html += '<div class="wtt-kv"><span class="wtt-k">気圧リスク</span><span class="wtt-v">' +
-                        '<span class="wtt-risk" style="background:' + WX_RISK_COLOR[rk] + '">' + WX_RISK_LABEL[rk] + '</span> ' +
-                        '<span class="wtt-riskdesc">' + WX_RISK_DESC[rk] + '</span></span></div>';
+                    '<span class="wtt-risk" style="background:' + WX_RISK_COLOR[rk] + '">' + WX_RISK_LABEL[rk] + '</span> ' +
+                    '<span class="wtt-riskdesc">' + WX_RISK_DESC[rk] + '</span></span></div>';
             }
 
             // 予報後半（7日以降）の低精度を明示
@@ -774,7 +883,7 @@
             const rect = chart.canvas.getBoundingClientRect();
             const ttW = el.offsetWidth || 240;
             let left = window.scrollX + rect.left + tt.caretX + 16;
-            let top  = window.scrollY + rect.top  + tt.caretY - 12;
+            let top = window.scrollY + rect.top + tt.caretY - 12;
 
             const viewRight = window.scrollX + document.documentElement.clientWidth;
             if (left + ttW + 12 > viewRight) {
@@ -784,7 +893,7 @@
 
             el.style.opacity = 1;
             el.style.left = left + 'px';
-            el.style.top  = top + 'px';
+            el.style.top = top + 'px';
         }
 
         new Chart(document.getElementById('chart'), {
@@ -825,11 +934,11 @@
 
         // --- タイムライン描画 ---
         document.getElementById('timeline').innerHTML = TIMELINE.map(x => `
-      <div class="slot">
-        <div class="t">${x.time.replace("\n", "<br>")}</div>
-        <div class="b ${x.risk}">${x.label}</div>
-        <div class="s ${x.risk}">${x.desc}</div>
-      </div>`).join('');
+          <div class="slot">
+            <div class="t">${x.time.replace("\n", "<br>")}</div>
+            <div class="b ${x.risk}">${x.label}</div>
+            <div class="s ${x.risk}">${x.desc}</div>
+          </div>`).join('');
     </script>
 </body>
 </html>
